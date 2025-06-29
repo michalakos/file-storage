@@ -40,3 +40,7 @@ A minimal Spring Boot-based file storage application with user authentication an
    spring.datasource.url=jdbc:h2:file:./data/filestore
    spring.h2.console.enabled=true
    ```
+   
+## TODOs
+
+- Use DTOs instead of Model classes for returning data
