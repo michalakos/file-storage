@@ -17,6 +17,4 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
 
     Optional<FileMetadata> findByIdAndOwner(UUID id, User owner);
 
-    Optional<FileMetadata> findById(UUID id);
-
 }

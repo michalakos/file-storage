@@ -1,9 +1,10 @@
 package com.mvasilakos.FileStorage.service;
 
+import com.mvasilakos.FileStorage.dto.FileMetadataDto;
+import com.mvasilakos.FileStorage.mapper.FileMetadataMapper;
 import com.mvasilakos.FileStorage.model.FileMetadata;
 import com.mvasilakos.FileStorage.model.User;
 import com.mvasilakos.FileStorage.repository.FileMetadataRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -23,15 +24,15 @@ import java.util.UUID;
 public class FileStorageService {
 
     private final FileMetadataRepository fileMetadataRepository;
-    private final UserService userService;
+    private final FileMetadataMapper fileMetadataMapper;
     private final Path rootLocation;
 
     public FileStorageService(
             FileMetadataRepository fileMetadataRepository,
-            UserService userService,
+            FileMetadataMapper fileMetadataMapper,
             @Value("${storage.location}") String storagePath) {
         this.fileMetadataRepository = fileMetadataRepository;
-        this.userService = userService;
+        this.fileMetadataMapper = fileMetadataMapper;
         this.rootLocation = Paths.get(storagePath).toAbsolutePath().normalize();
         initStorage();
     }
@@ -44,26 +45,31 @@ public class FileStorageService {
         }
     }
 
-    public FileMetadata storeFile(MultipartFile file, User owner) {
-        UUID id = UUID.randomUUID();
-        String filename = id + "_" + file.getOriginalFilename();
-
+    public FileMetadataDto storeFile(MultipartFile file, User owner) {
         try {
-            Files.copy(file.getInputStream(), rootLocation.resolve(filename));
-
-            FileMetadata metadata = new FileMetadata();
-            metadata.setId(id);
-            metadata.setFilename(file.getOriginalFilename());
-            metadata.setContentType(file.getContentType());
-            metadata.setSize(file.getSize());
-            metadata.setUploadDate(LocalDateTime.now());
-            metadata.setStoragePath(filename);
-            metadata.setOwner(owner);
-
-            return fileMetadataRepository.save(metadata);
+            FileMetadata metadata = getFileMetadata(file, owner);
+            String location = metadata.getStoragePath();
+            Files.copy(file.getInputStream(), rootLocation.resolve(location));
+            FileMetadata fileMetadata = fileMetadataRepository.save(metadata);
+            return fileMetadataMapper.toDto(fileMetadata);
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file", e);
         }
+    }
+
+    private FileMetadata getFileMetadata(MultipartFile file, User owner) {
+        UUID id = UUID.randomUUID();
+        String location = id + "_" + file.getOriginalFilename();
+
+        FileMetadata metadata = new FileMetadata();
+        metadata.setId(id);
+        metadata.setFilename(file.getOriginalFilename());
+        metadata.setContentType(file.getContentType());
+        metadata.setSize(file.getSize());
+        metadata.setUploadDate(LocalDateTime.now());
+        metadata.setStoragePath(location);
+        metadata.setOwner(owner);
+        return metadata;
     }
 
     public Resource loadFileAsResource(UUID fileId, User owner) {
@@ -83,8 +89,11 @@ public class FileStorageService {
         }
     }
 
-    public List<FileMetadata> listUserFiles(User owner) {
-        return fileMetadataRepository.findByOwner(owner);
+    public List<FileMetadataDto> listUserFiles(User owner) {
+        List<FileMetadata> fileMetadataList = fileMetadataRepository.findByOwner(owner);
+        return fileMetadataList.stream()
+            .map(fileMetadataMapper::toDto)
+            .toList();
     }
 
     public void deleteFile(UUID fileId, User owner) {
