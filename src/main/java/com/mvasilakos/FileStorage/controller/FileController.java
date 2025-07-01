@@ -1,5 +1,7 @@
 package com.mvasilakos.FileStorage.controller;
 
+import com.mvasilakos.FileStorage.dto.FileMetadataDto;
+import com.mvasilakos.FileStorage.mapper.FileMetadataMapper;
 import com.mvasilakos.FileStorage.model.FileMetadata;
 import com.mvasilakos.FileStorage.model.User;
 import com.mvasilakos.FileStorage.service.FileStorageService;
@@ -22,17 +24,22 @@ public class FileController {
 
     private final FileStorageService storageService;
     private final UserService userService;
+    private final FileMetadataMapper fileMetadataMapper;
 
     @PostMapping
-    public FileMetadata uploadFile(@RequestParam("file") MultipartFile file, Principal principal) {
+    public FileMetadataDto uploadFile(@RequestParam("file") MultipartFile file, Principal principal) {
         User owner = userService.getAuthenticatedUser(principal);
-        return storageService.storeFile(file, owner);
+        FileMetadata fileMetadata = storageService.storeFile(file, owner);
+        return fileMetadataMapper.toDto(fileMetadata);
     }
 
     @GetMapping
-    public List<FileMetadata> listFiles(Principal principal) {
+    public List<FileMetadataDto> listFiles(Principal principal) {
         User owner = userService.getAuthenticatedUser(principal);
-        return storageService.listUserFiles(owner);
+        List<FileMetadata> fileMetadataList =  storageService.listUserFiles(owner);
+        return fileMetadataList.stream()
+            .map(fileMetadataMapper::toDto)
+            .toList();
     }
 
     @GetMapping("/{id}/data")

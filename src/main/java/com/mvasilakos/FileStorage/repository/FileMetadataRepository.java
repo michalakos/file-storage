@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface FileMetadataRepository extends JpaRepository<FileMetadata, Long> {
+public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID> {
 
     List<FileMetadata> findByOwner(User owner);
 
