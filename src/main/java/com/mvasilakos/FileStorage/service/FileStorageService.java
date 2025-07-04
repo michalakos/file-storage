@@ -47,7 +47,7 @@ public class FileStorageService {
 
     public FileMetadataDto storeFile(MultipartFile file, User owner) {
         try {
-            FileMetadata metadata = getFileMetadata(file, owner);
+            FileMetadata metadata = createFileMetadata(file, owner);
             String location = metadata.getStoragePath();
             Files.copy(file.getInputStream(), rootLocation.resolve(location));
             FileMetadata fileMetadata = fileMetadataRepository.save(metadata);
@@ -57,7 +57,7 @@ public class FileStorageService {
         }
     }
 
-    private FileMetadata getFileMetadata(MultipartFile file, User owner) {
+    private FileMetadata createFileMetadata(MultipartFile file, User owner) {
         UUID id = UUID.randomUUID();
         String location = id + "_" + file.getOriginalFilename();
 
@@ -70,6 +70,12 @@ public class FileStorageService {
         metadata.setStoragePath(location);
         metadata.setOwner(owner);
         return metadata;
+    }
+
+    public FileMetadataDto getFileMetadata(UUID fileId, User owner) {
+        FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
+            .orElseThrow(() -> new RuntimeException("File not found"));
+        return fileMetadataMapper.toDto(metadata);
     }
 
     public Resource loadFileAsResource(UUID fileId, User owner) {

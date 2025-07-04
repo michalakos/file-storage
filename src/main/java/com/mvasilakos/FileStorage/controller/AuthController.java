@@ -1,6 +1,6 @@
 package com.mvasilakos.FileStorage.controller;
 
-import com.mvasilakos.FileStorage.dto.AuthRequest;
+import com.mvasilakos.FileStorage.dto.AuthRequestDto;
 import com.mvasilakos.FileStorage.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +16,7 @@ public class AuthController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody AuthRequest request) {
+    public ResponseEntity<Void> register(@RequestBody AuthRequestDto request) {
         userService.registerUser(request.username(), request.password());
         return ResponseEntity.ok().build();
     }
