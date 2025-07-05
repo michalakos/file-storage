@@ -8,7 +8,6 @@ import com.mvasilakos.FileStorage.model.FilePermission;
 import com.mvasilakos.FileStorage.model.User;
 import com.mvasilakos.FileStorage.repository.FileMetadataRepository;
 import com.mvasilakos.FileStorage.repository.FilePermissionRepository;
-import com.mvasilakos.FileStorage.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -26,24 +25,24 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class FileStorageService {
+public class FileService {
 
     private final FileMetadataMapper fileMetadataMapper;
     private final FileMetadataRepository fileMetadataRepository;
     private final FilePermissionRepository filePermissionRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final Path rootLocation;
 
-    public FileStorageService(
+    public FileService(
             FileMetadataRepository fileMetadataRepository,
             FileMetadataMapper fileMetadataMapper,
             FilePermissionRepository filePermissionRepository,
-            UserRepository userRepository,
+            UserService userService,
             @Value("${storage.location}") String storagePath) {
         this.fileMetadataMapper = fileMetadataMapper;
         this.fileMetadataRepository = fileMetadataRepository;
         this.filePermissionRepository = filePermissionRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.rootLocation = Paths.get(storagePath).toAbsolutePath().normalize();
         initStorage();
     }
@@ -111,6 +110,20 @@ public class FileStorageService {
         return fileMetadataMapper.toDtoList(fileMetadataList);
     }
 
+    public List<FileMetadataDto> listAllFiles() {
+        List<FileMetadata> fileMetadataList = fileMetadataRepository.findAll();
+        return fileMetadataMapper.toDtoList(fileMetadataList);
+    }
+
+    public List<FileMetadataDto> findFilesLargerThan(Long sizeInBytes) {
+        List<FileMetadata> fileMetadataList = fileMetadataRepository.findLargerThan(sizeInBytes);
+        return fileMetadataMapper.toDtoList(fileMetadataList);
+    }
+
+    public Long calculateTotalStorageUsage() {
+        return listAllFiles().stream().mapToLong(FileMetadataDto::size).sum();
+    }
+
     public void deleteFile(UUID fileId, User owner) {
         FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
                 .orElseThrow(() -> new RuntimeException("File not found"));
@@ -125,12 +138,12 @@ public class FileStorageService {
     public Boolean shareFile(UUID fileId, String username, boolean readOnly, User owner) {
         FilePermission filePermission = new FilePermission();
         Optional<FileMetadata> fileMetadataOptional = fileMetadataRepository.findByIdAndOwner(fileId, owner);
-        Optional<User> userOptional = userRepository.findByUsername(username);
-        if (fileMetadataOptional.isEmpty() || userOptional.isEmpty()) {
+        User user = userService.findByUsername(username);
+        if (fileMetadataOptional.isEmpty()) {
             return false;
         }
+
         FileMetadata fileMetadata = fileMetadataOptional.get();
-        User user = userOptional.get();
         filePermission.setId(UUID.randomUUID());
         filePermission.setFileMetadata(fileMetadata);
         filePermission.setUser(user);

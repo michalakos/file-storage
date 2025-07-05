@@ -2,14 +2,12 @@ package com.mvasilakos.FileStorage.mapper;
 
 import com.mvasilakos.FileStorage.dto.FileMetadataDto;
 import com.mvasilakos.FileStorage.model.FileMetadata;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 
 @Component
 @RequiredArgsConstructor
-@Builder
 public class FileMetadataMapper implements EntityMapper<FileMetadata, FileMetadataDto> {
 
     public FileMetadataDto toDto(FileMetadata entity) {

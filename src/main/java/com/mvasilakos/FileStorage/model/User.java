@@ -27,16 +27,22 @@ public class User implements UserDetails {
     @ToString.Exclude
     private String password;
 
+    private String email;
+
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private Set<FileMetadata> files = new HashSet<>();
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Boolean isAdmin;
+    private UserRole role = UserRole.USER;
+
+    @Column(nullable = false)
+    private boolean enabled = true;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override
@@ -56,7 +62,15 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.enabled;
+    }
+
+    public boolean isAdmin() {
+        return role == UserRole.ADMIN;
+    }
+
+    public boolean isUser() {
+        return role == UserRole.USER;
     }
 
     @Override

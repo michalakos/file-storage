@@ -2,7 +2,7 @@ package com.mvasilakos.FileStorage.controller;
 
 import com.mvasilakos.FileStorage.dto.FileMetadataDto;
 import com.mvasilakos.FileStorage.model.User;
-import com.mvasilakos.FileStorage.service.FileStorageService;
+import com.mvasilakos.FileStorage.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileController {
 
-    private final FileStorageService storageService;
+    private final FileService storageService;
 
     @PostMapping
     public ResponseEntity<FileMetadataDto> uploadFile(@RequestParam("file") MultipartFile file,

@@ -39,4 +39,7 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
         "WHERE f.id = :id AND (f.owner = :user OR p.user = :user)")
     Optional<FileMetadata> findByIdAndOwnerOrSharedWith(@Param("id") UUID id, @Param("user") User user);
 
+    @Query("SELECT DISTINCT f FROM FileMetadata f WHERE f.size > :size")
+    List<FileMetadata> findLargerThan(@Param("size") Long size);
+
 }

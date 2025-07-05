@@ -68,6 +68,11 @@
 			<artifactId>checkstyle</artifactId>
 			<version>10.26.0</version>
 		</dependency>
+		<dependency>
+			<groupId>commons-validator</groupId>
+			<artifactId>commons-validator</artifactId>
+			<version>1.9.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
