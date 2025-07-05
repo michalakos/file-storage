@@ -42,11 +42,13 @@ A minimal Spring Boot-based file storage application with user authentication an
    ```
 
 ## TODOs:
+* Admin user
+* Allow renaming of files
+* If user has uploaded file of the same name as him if he wants it overwritten
 * Custom exceptions
-* Create access levels (read, write, delete(?))
-* Share documents
 * Implement limit for storage per user
 * Secure files (only accept certain types of files / virus scan)
 * Better authentication
+* Connect with persistent database (dockerized?)
 * Dockerize
 * GUI

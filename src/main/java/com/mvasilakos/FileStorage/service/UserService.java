@@ -24,6 +24,7 @@ public class UserService {
         user.setId(UUID.randomUUID());
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
+        user.setIsAdmin(false);
         return userRepository.save(user);
     }
 

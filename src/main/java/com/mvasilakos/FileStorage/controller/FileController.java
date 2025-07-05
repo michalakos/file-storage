@@ -30,21 +30,21 @@ public class FileController {
     }
 
     @GetMapping
-    public ResponseEntity<List<FileMetadataDto>> listFiles(@AuthenticationPrincipal User owner) {
-        List<FileMetadataDto> metadata =  storageService.listUserFiles(owner);
+    public ResponseEntity<List<FileMetadataDto>> listFiles(@AuthenticationPrincipal User user) {
+        List<FileMetadataDto> metadata =  storageService.listUserFiles(user);
         return ResponseEntity.ok(metadata);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FileMetadataDto> getFileMetadata(@PathVariable UUID id, @AuthenticationPrincipal User owner) {
-        FileMetadataDto metadata = storageService.getFileMetadata(id, owner);
+    public ResponseEntity<FileMetadataDto> getFileMetadata(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        FileMetadataDto metadata = storageService.getFileMetadata(id, user);
         return ResponseEntity.ok(metadata);
     }
 
     @GetMapping("/{id}/data")
-    public ResponseEntity<Resource> downloadFile(@PathVariable UUID id, @AuthenticationPrincipal User owner) {
-        Resource resource = storageService.loadFileAsResource(id, owner);
-        FileMetadataDto metadata = storageService.getFileMetadata(id, owner);
+    public ResponseEntity<Resource> downloadFile(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        Resource resource = storageService.loadFileAsResource(id, user);
+        FileMetadataDto metadata = storageService.getFileMetadata(id, user);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -57,5 +57,14 @@ public class FileController {
     public ResponseEntity<Void> deleteFile(@PathVariable UUID id, @AuthenticationPrincipal User owner) {
         storageService.deleteFile(id, owner);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/share/{fileId}/{username}/{readOnly}")
+    public ResponseEntity<Boolean> shareFile(@PathVariable UUID fileId,
+                                             @PathVariable String username,
+                                             @PathVariable boolean readOnly,
+                                             @AuthenticationPrincipal User owner) {
+        Boolean result = storageService.shareFile(fileId, username, readOnly, owner);
+        return ResponseEntity.ok(result);
     }
 }

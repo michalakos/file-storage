@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -21,22 +23,26 @@ public class FileMetadata {
     @Column(nullable = false)
     private String filename;
 
-    @Column(name="content_type", nullable = false)
+    @Column(nullable = false)
     private String contentType;
 
     @Column(nullable = false)
     private Long size;
 
-    @Column(name = "upload_date", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime uploadDate;
 
-    @Column(name = "storage_path", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String storagePath;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     @ToString.Exclude
     private User owner;
+
+    @OneToMany(mappedBy = "fileMetadata", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private Set<FilePermission> sharedWith = new HashSet<>();
 
     @Override
     public boolean equals(Object o) {

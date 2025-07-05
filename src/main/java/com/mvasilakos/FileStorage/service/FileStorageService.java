@@ -2,9 +2,13 @@ package com.mvasilakos.FileStorage.service;
 
 import com.mvasilakos.FileStorage.dto.FileMetadataDto;
 import com.mvasilakos.FileStorage.mapper.FileMetadataMapper;
+import com.mvasilakos.FileStorage.model.FileAccessLevel;
 import com.mvasilakos.FileStorage.model.FileMetadata;
+import com.mvasilakos.FileStorage.model.FilePermission;
 import com.mvasilakos.FileStorage.model.User;
 import com.mvasilakos.FileStorage.repository.FileMetadataRepository;
+import com.mvasilakos.FileStorage.repository.FilePermissionRepository;
+import com.mvasilakos.FileStorage.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -18,21 +22,28 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
 
-    private final FileMetadataRepository fileMetadataRepository;
     private final FileMetadataMapper fileMetadataMapper;
+    private final FileMetadataRepository fileMetadataRepository;
+    private final FilePermissionRepository filePermissionRepository;
+    private final UserRepository userRepository;
     private final Path rootLocation;
 
     public FileStorageService(
             FileMetadataRepository fileMetadataRepository,
             FileMetadataMapper fileMetadataMapper,
+            FilePermissionRepository filePermissionRepository,
+            UserRepository userRepository,
             @Value("${storage.location}") String storagePath) {
-        this.fileMetadataRepository = fileMetadataRepository;
         this.fileMetadataMapper = fileMetadataMapper;
+        this.fileMetadataRepository = fileMetadataRepository;
+        this.filePermissionRepository = filePermissionRepository;
+        this.userRepository = userRepository;
         this.rootLocation = Paths.get(storagePath).toAbsolutePath().normalize();
         initStorage();
     }
@@ -72,14 +83,14 @@ public class FileStorageService {
         return metadata;
     }
 
-    public FileMetadataDto getFileMetadata(UUID fileId, User owner) {
-        FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
+    public FileMetadataDto getFileMetadata(UUID fileId, User user) {
+        FileMetadata metadata = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user)
             .orElseThrow(() -> new RuntimeException("File not found"));
         return fileMetadataMapper.toDto(metadata);
     }
 
-    public Resource loadFileAsResource(UUID fileId, User owner) {
-        FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
+    public Resource loadFileAsResource(UUID fileId, User user) {
+        FileMetadata metadata = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user)
                 .orElseThrow(() -> new RuntimeException("File not found"));
 
         Path filePath = rootLocation.resolve(metadata.getStoragePath());
@@ -95,22 +106,37 @@ public class FileStorageService {
         }
     }
 
-    public List<FileMetadataDto> listUserFiles(User owner) {
-        List<FileMetadata> fileMetadataList = fileMetadataRepository.findByOwner(owner);
-        return fileMetadataList.stream()
-            .map(fileMetadataMapper::toDto)
-            .toList();
+    public List<FileMetadataDto> listUserFiles(User user) {
+        List<FileMetadata> fileMetadataList = fileMetadataRepository.findByOwnerOrSharedWith(user);
+        return fileMetadataMapper.toDtoList(fileMetadataList);
     }
 
     public void deleteFile(UUID fileId, User owner) {
         FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
                 .orElseThrow(() -> new RuntimeException("File not found"));
-
         try {
             Files.delete(rootLocation.resolve(metadata.getStoragePath()));
             fileMetadataRepository.delete(metadata);
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete file", e);
         }
+    }
+
+    public Boolean shareFile(UUID fileId, String username, boolean readOnly, User owner) {
+        FilePermission filePermission = new FilePermission();
+        Optional<FileMetadata> fileMetadataOptional = fileMetadataRepository.findByIdAndOwner(fileId, owner);
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (fileMetadataOptional.isEmpty() || userOptional.isEmpty()) {
+            return false;
+        }
+        FileMetadata fileMetadata = fileMetadataOptional.get();
+        User user = userOptional.get();
+        filePermission.setId(UUID.randomUUID());
+        filePermission.setFileMetadata(fileMetadata);
+        filePermission.setUser(user);
+        FileAccessLevel fileAccessLevel = readOnly ? FileAccessLevel.VIEW : FileAccessLevel.OWNER;
+        filePermission.setAccessLevel(fileAccessLevel);
+        filePermissionRepository.save(filePermission);
+        return true;
     }
 }

@@ -31,6 +31,9 @@ public class User implements UserDetails {
     @ToString.Exclude
     private Set<FileMetadata> files = new HashSet<>();
 
+    @Column(nullable = false)
+    private Boolean isAdmin;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
