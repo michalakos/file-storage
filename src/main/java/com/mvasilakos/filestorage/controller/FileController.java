@@ -112,14 +112,14 @@ public class FileController {
    * @param username the username of the user we want to share the file with
    * @param readOnly the user should only have access to view/download the file
    * @param owner the user that is logged in
-   * @return a boolean indicating if the action was successfully completed
+   * @return nothing
    */
   @PostMapping("/share/{fileId}/{username}/{readOnly}")
-  public ResponseEntity<Boolean> shareFile(@PathVariable UUID fileId,
+  public ResponseEntity<Void> shareFile(@PathVariable UUID fileId,
       @PathVariable String username,
       @PathVariable boolean readOnly,
       @AuthenticationPrincipal User owner) {
-    Boolean result = storageService.shareFile(fileId, username, readOnly, owner);
-    return ResponseEntity.ok(result);
+    storageService.shareFile(fileId, username, readOnly, owner);
+    return ResponseEntity.noContent().build();
   }
 }

@@ -203,14 +203,13 @@ public class FileService {
    * @param username username of the user that we want to share the file with
    * @param readOnly the user should only be able to have read/download access to the file
    * @param owner user who wants to share the file
-   * @return true if the operation was successful
    */
-  public Boolean shareFile(UUID fileId, String username, boolean readOnly, User owner) {
+  public void shareFile(UUID fileId, String username, boolean readOnly, User owner) {
     FilePermission filePermission = new FilePermission();
     Optional<FileMetadata> fileMetadataOptional = fileMetadataRepository
         .findByIdAndOwner(fileId, owner);
     if (fileMetadataOptional.isEmpty()) {
-      return false;
+      throw new RuntimeException("No file found with id: " + fileId + " and owner: " + owner);
     }
 
     FileMetadata fileMetadata = fileMetadataOptional.get();
@@ -221,6 +220,5 @@ public class FileService {
     FileAccessLevel fileAccessLevel = readOnly ? FileAccessLevel.VIEW : FileAccessLevel.OWNER;
     filePermission.setAccessLevel(fileAccessLevel);
     filePermissionRepository.save(filePermission);
-    return true;
   }
 }

@@ -13,10 +13,13 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.ToString.Exclude;
 
 
 /**
@@ -27,6 +30,8 @@ import lombok.ToString;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @ToString
 public class FileMetadata {
 
@@ -51,11 +56,12 @@ public class FileMetadata {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "owner_id", nullable = false)
-  @ToString.Exclude
+  @Exclude
   private User owner;
 
   @OneToMany(mappedBy = "fileMetadata", cascade = CascadeType.ALL, orphanRemoval = true)
-  @ToString.Exclude
+  @Exclude
+  @Builder.Default
   private Set<FilePermission> sharedWith = new HashSet<>();
 
   @Override

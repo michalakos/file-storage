@@ -13,6 +13,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -30,6 +32,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @ToString
 public class User implements UserDetails {
 
@@ -48,13 +52,16 @@ public class User implements UserDetails {
 
   @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
   @ToString.Exclude
+  @Builder.Default
   private Set<FileMetadata> files = new HashSet<>();
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
+  @Builder.Default
   private UserRole role = UserRole.USER;
 
   @Column(nullable = false)
+  @Builder.Default
   private boolean enabled = true;
 
   @Override
