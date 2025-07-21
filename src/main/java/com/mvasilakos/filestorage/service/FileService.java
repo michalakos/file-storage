@@ -1,6 +1,8 @@
 package com.mvasilakos.filestorage.service;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
+import com.mvasilakos.filestorage.exception.FileStorageException;
+import com.mvasilakos.filestorage.exception.StorageLimitExceededException;
 import com.mvasilakos.filestorage.mapper.FileMetadataMapper;
 import com.mvasilakos.filestorage.model.FileAccessLevel;
 import com.mvasilakos.filestorage.model.FileMetadata;
@@ -9,10 +11,12 @@ import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.FilePermissionRepository;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +33,9 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Service
 public class FileService {
+
+  @Value("${file.storage.max-storage-per-user:1048576}")
+  private long maxStoragePerUser;
 
   private final FileMetadataMapper fileMetadataMapper;
   private final FileMetadataRepository fileMetadataRepository;
@@ -70,35 +77,103 @@ public class FileService {
   /**
    * Store file.
    *
-   * @param file  file
-   * @param owner the user who stored the file
-   * @return file metadata
+   * @param file  file to store
+   * @param owner the user who is storing the file
+   * @return file metadata DTO
+   * @throws FileStorageException if storage fails or limits are exceeded
    */
   public FileMetadataDto storeFile(MultipartFile file, User owner) {
+    validateFile(file);
+
+    long userStorageUsed = calculateUserTotalStorage(owner);
+    long fileSize = file.getSize();
+    validateStorageLimit(userStorageUsed, fileSize);
+
+    FileMetadata metadata = createFileMetadata(file, owner);
     try {
-      FileMetadata metadata = createFileMetadata(file, owner);
-      String location = metadata.getStoragePath();
-      Files.copy(file.getInputStream(), rootLocation.resolve(location));
-      FileMetadata fileMetadata = fileMetadataRepository.save(metadata);
-      return fileMetadataMapper.toDto(fileMetadata);
+      saveFileToStorage(file, metadata.getStoragePath());
+      FileMetadata savedMetadata = fileMetadataRepository.save(metadata);
+      return fileMetadataMapper.toDto(savedMetadata);
     } catch (IOException e) {
-      throw new RuntimeException("Failed to store file", e);
+      throw new FileStorageException("Failed to store file: " + file.getOriginalFilename(), e);
+    }
+  }
+
+  private void validateFile(MultipartFile file) {
+    if (file.isEmpty()) {
+      throw new FileStorageException("Cannot store empty file");
+    }
+    if (file.getOriginalFilename() == null || file.getOriginalFilename().trim().isEmpty()) {
+      throw new FileStorageException("File must have a valid filename");
+    }
+  }
+
+  private void validateStorageLimit(long userStorageUsed, long fileSize) {
+    if (userStorageUsed + fileSize > maxStoragePerUser) {
+      long availableBytes = maxStoragePerUser - userStorageUsed;
+
+      throw new StorageLimitExceededException(
+          String.format("User storage limit exceeded. Used: %s, Available: %s, File size: %s",
+              formatBytes(userStorageUsed),
+              formatBytes(availableBytes),
+              formatBytes(fileSize))
+      );
+    }
+  }
+
+  /**
+   * Format bytes into MB with appropriate decimal places.
+   *
+   * @param bytes the number of bytes
+   * @return formatted string in MB
+   */
+  private String formatBytes(long bytes) {
+    double megabytes = bytes / (1024.0 * 1024.0);
+
+    if (megabytes >= 100) {
+      return String.format("%.0f MB", megabytes); // >= 100 MB: no decimals
+    } else if (megabytes >= 10) {
+      return String.format("%.1f MB", megabytes); // >= 10 MB: 1 decimal
+    } else {
+      return String.format("%.2f MB", megabytes); // < 10 MB: 2 decimals
     }
   }
 
   private FileMetadata createFileMetadata(MultipartFile file, User owner) {
     UUID id = UUID.randomUUID();
-    String location = id + "_" + file.getOriginalFilename();
+    String sanitizedFilename = sanitizeFilename(file.getOriginalFilename());
+    String storagePath = generateStoragePath(id, sanitizedFilename);
 
-    FileMetadata metadata = new FileMetadata();
-    metadata.setId(id);
-    metadata.setFilename(file.getOriginalFilename());
-    metadata.setContentType(file.getContentType());
-    metadata.setSize(file.getSize());
-    metadata.setUploadDate(LocalDateTime.now());
-    metadata.setStoragePath(location);
-    metadata.setOwner(owner);
-    return metadata;
+    return FileMetadata.builder()
+        .id(id)
+        .filename(sanitizedFilename)
+        .contentType(file.getContentType())
+        .size(file.getSize())
+        .uploadDate(LocalDateTime.now())
+        .storagePath(storagePath)
+        .owner(owner)
+        .build();
+  }
+
+  private String sanitizeFilename(String filename) {
+    if (filename == null) {
+      return "unknown";
+    }
+    // Remove path traversal characters and other potentially dangerous chars
+    return filename.replaceAll("[^a-zA-Z0-9._-]", "_").trim();
+  }
+
+  private String generateStoragePath(UUID id, String filename) {
+    return String.format("%s_%s", id, filename);
+  }
+
+  private void saveFileToStorage(MultipartFile file, String storagePath) throws IOException {
+    Path targetPath = rootLocation.resolve(storagePath);
+    // Ensure parent directory exists
+    Files.createDirectories(targetPath.getParent());
+    try (InputStream inputStream = file.getInputStream()) {
+      Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+    }
   }
 
   /**
@@ -186,13 +261,17 @@ public class FileService {
     return fileMetadataMapper.toDtoList(fileMetadataList);
   }
 
+  private Long calculateUserTotalStorage(User user) {
+    return fileMetadataRepository.sumSizeByOwner(user);
+  }
+
   /**
    * Get the total storage size used for files.
    *
    * @return size in bytes
    */
   public Long calculateTotalStorageUsage() {
-    return listAllFiles().stream().mapToLong(FileMetadataDto::size).sum();
+    return fileMetadataRepository.calculateTotalStorageUsage();
   }
 
   /**

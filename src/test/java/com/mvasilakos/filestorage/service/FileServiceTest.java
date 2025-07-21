@@ -15,6 +15,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
+import com.mvasilakos.filestorage.exception.FileStorageException;
+import com.mvasilakos.filestorage.exception.StorageLimitExceededException;
 import com.mvasilakos.filestorage.mapper.FileMetadataMapper;
 import com.mvasilakos.filestorage.model.FileAccessLevel;
 import com.mvasilakos.filestorage.model.FileMetadata;
@@ -26,7 +28,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +40,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -113,6 +115,8 @@ class FileServiceTest {
         .contentType("text/plain")
         .size(1024L)
         .build();
+
+    ReflectionTestUtils.setField(fileService, "maxStoragePerUser", 10485760L);
   }
 
   @Test
@@ -135,34 +139,27 @@ class FileServiceTest {
   }
 
   @Test
-  void storeFileWithNullFilenameShouldHandleNullFilename() throws IOException {
+  void storeFileWithNullFilenameShouldThrowWhenNullFilename() {
     // Given
-    String contentType = "text/plain";
-    long size = 1024L;
-    byte[] content = "test content".getBytes();
-
     when(multipartFile.getOriginalFilename()).thenReturn(null);
-    when(multipartFile.getContentType()).thenReturn(contentType);
-    when(multipartFile.getSize()).thenReturn(size);
-    when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream(content));
-    when(fileMetadataRepository.save(any(FileMetadata.class))).thenReturn(testFileMetadata);
-    when(fileMetadataMapper.toDto(testFileMetadata)).thenReturn(testFileMetadataDto);
 
-    // When
-    FileMetadataDto result = fileService.storeFile(multipartFile, ownerUser);
-
-    // Then
-    assertNotNull(result);
-    ArgumentCaptor<FileMetadata> metadataCaptor = ArgumentCaptor.forClass(FileMetadata.class);
-    verify(fileMetadataRepository).save(metadataCaptor.capture());
-    FileMetadata savedMetadata = metadataCaptor.getValue();
-
-    assertNull(savedMetadata.getFilename());
-    assertEquals(contentType, savedMetadata.getContentType());
-    assertEquals(size, savedMetadata.getSize());
-    assertTrue(savedMetadata.getStoragePath().startsWith(
-        savedMetadata.getId().toString() + "_null"));
+    // When & Then
+    assertThrows(FileStorageException.class,
+        () -> fileService.storeFile(multipartFile, ownerUser));
+    verify(fileMetadataRepository, never()).save(any());
   }
+
+  @Test
+  void storeFileWithNullFilenameShouldThrowWhenEmptyFilename() {
+    // Given
+    when(multipartFile.getOriginalFilename()).thenReturn(" ");
+
+    // When & Then
+    assertThrows(FileStorageException.class,
+        () -> fileService.storeFile(multipartFile, ownerUser));
+    verify(fileMetadataRepository, never()).save(any());
+  }
+
 
   @Test
   void storeFileWithNullContentTypeShouldHandleNullContentType() throws IOException {
@@ -222,92 +219,19 @@ class FileServiceTest {
   }
 
   @Test
-  void storeFileWithLargeFileShouldHandleLargeSize() throws IOException {
+  void storeFileWithLargeFileShouldThrowLargeSize() {
     // Given
     String originalFilename = "largeFile.bin";
-    String contentType = "application/octet-stream";
     long size = Long.MAX_VALUE;
-    byte[] content = "large file content".getBytes();
 
-    when(multipartFile.getOriginalFilename()).thenReturn(originalFilename);
-    when(multipartFile.getContentType()).thenReturn(contentType);
-    when(multipartFile.getSize()).thenReturn(size);
-    when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream(content));
-    when(fileMetadataRepository.save(any(FileMetadata.class))).thenReturn(testFileMetadata);
-    when(fileMetadataMapper.toDto(testFileMetadata)).thenReturn(testFileMetadataDto);
-
-    // When
-    FileMetadataDto result = fileService.storeFile(multipartFile, ownerUser);
-
-    // Then
-    assertNotNull(result);
-    ArgumentCaptor<FileMetadata> metadataCaptor = ArgumentCaptor.forClass(FileMetadata.class);
-    verify(fileMetadataRepository).save(metadataCaptor.capture());
-    FileMetadata savedMetadata = metadataCaptor.getValue();
-
-    assertEquals(originalFilename, savedMetadata.getFilename());
-    assertEquals(contentType, savedMetadata.getContentType());
-    assertEquals(Long.MAX_VALUE, savedMetadata.getSize());
-  }
-
-  @Test
-  void storeFileWithBothNullFilenameAndContentTypeShouldHandleBothNull() throws IOException {
     // Given
-    long size = 512L;
-    byte[] content = "test content".getBytes();
-
-    when(multipartFile.getOriginalFilename()).thenReturn(null);
-    when(multipartFile.getContentType()).thenReturn(null);
-    when(multipartFile.getSize()).thenReturn(size);
-    when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream(content));
-    when(fileMetadataRepository.save(any(FileMetadata.class))).thenReturn(testFileMetadata);
-    when(fileMetadataMapper.toDto(testFileMetadata)).thenReturn(testFileMetadataDto);
-
-    // When
-    FileMetadataDto result = fileService.storeFile(multipartFile, ownerUser);
-
-    // Then
-    assertNotNull(result);
-    ArgumentCaptor<FileMetadata> metadataCaptor = ArgumentCaptor.forClass(FileMetadata.class);
-    verify(fileMetadataRepository).save(metadataCaptor.capture());
-    FileMetadata savedMetadata = metadataCaptor.getValue();
-
-    assertNull(savedMetadata.getFilename());
-    assertNull(savedMetadata.getContentType());
-    assertEquals(size, savedMetadata.getSize());
-    assertNotNull(savedMetadata.getId());
-    assertNotNull(savedMetadata.getUploadDate());
-    assertEquals(ownerUser, savedMetadata.getOwner());
-  }
-
-  @Test
-  void storeFileWithEmptyFilenameShouldHandleEmptyFilename() throws IOException {
-    // Given
-    String originalFilename = "";
-    String contentType = "text/plain";
-    long size = 100L;
-    byte[] content = "test".getBytes();
-
     when(multipartFile.getOriginalFilename()).thenReturn(originalFilename);
-    when(multipartFile.getContentType()).thenReturn(contentType);
     when(multipartFile.getSize()).thenReturn(size);
-    when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream(content));
-    when(fileMetadataRepository.save(any(FileMetadata.class))).thenReturn(testFileMetadata);
-    when(fileMetadataMapper.toDto(testFileMetadata)).thenReturn(testFileMetadataDto);
 
-    // When
-    FileMetadataDto result = fileService.storeFile(multipartFile, ownerUser);
-
-    // Then
-    assertNotNull(result);
-    ArgumentCaptor<FileMetadata> metadataCaptor = ArgumentCaptor.forClass(FileMetadata.class);
-    verify(fileMetadataRepository).save(metadataCaptor.capture());
-    FileMetadata savedMetadata = metadataCaptor.getValue();
-
-    assertEquals("", savedMetadata.getFilename());
-    assertEquals(contentType, savedMetadata.getContentType());
-    assertEquals(size, savedMetadata.getSize());
-    assertTrue(savedMetadata.getStoragePath().endsWith("_"));
+    // When & Then
+    assertThrows(StorageLimitExceededException.class,
+        () -> fileService.storeFile(multipartFile, ownerUser));
+    verify(fileMetadataRepository, never()).save(any());
   }
 
   @Test
@@ -329,15 +253,16 @@ class FileServiceTest {
     FileMetadataDto result = fileService.storeFile(multipartFile, ownerUser);
 
     // Then
+    String sanitizedFilename = "file_with_spaces___special_chars_____.txt";
     assertNotNull(result);
     ArgumentCaptor<FileMetadata> metadataCaptor = ArgumentCaptor.forClass(FileMetadata.class);
     verify(fileMetadataRepository).save(metadataCaptor.capture());
     FileMetadata savedMetadata = metadataCaptor.getValue();
 
-    assertEquals(originalFilename, savedMetadata.getFilename());
+    assertEquals(sanitizedFilename, savedMetadata.getFilename());
     assertEquals(contentType, savedMetadata.getContentType());
     assertEquals(size, savedMetadata.getSize());
-    assertTrue(savedMetadata.getStoragePath().contains(originalFilename));
+    assertTrue(savedMetadata.getStoragePath().contains(sanitizedFilename));
   }
 
   @Test
@@ -387,7 +312,7 @@ class FileServiceTest {
     RuntimeException exception = assertThrows(RuntimeException.class,
         () -> fileService.storeFile(multipartFile, ownerUser));
 
-    assertEquals("Failed to store file", exception.getMessage());
+    assertEquals("Failed to store file: test.txt", exception.getMessage());
     verify(fileMetadataRepository, never()).save(any());
   }
 
@@ -581,44 +506,6 @@ class FileServiceTest {
     assertEquals(dtoList, result);
     verify(fileMetadataRepository).findLargerThan(sizeInBytes);
     verify(fileMetadataMapper).toDtoList(metadataList);
-  }
-
-  @Test
-  void calculateTotalStorageUsageShouldSumAllFileSizes() {
-    // Given
-    FileMetadataDto file1 = FileMetadataDto.builder()
-        .size(1024L)
-        .build();
-    FileMetadataDto file2 = FileMetadataDto.builder()
-        .size(2048L)
-        .build();
-
-    List<FileMetadata> metadataList = Arrays.asList(testFileMetadata, new FileMetadata());
-    List<FileMetadataDto> dtoList = Arrays.asList(file1, file2);
-
-    when(fileMetadataRepository.findAll()).thenReturn(metadataList);
-    when(fileMetadataMapper.toDtoList(metadataList)).thenReturn(dtoList);
-
-    // When
-    Long result = fileService.calculateTotalStorageUsage();
-
-    // Then
-    assertEquals(3072L, result);
-    verify(fileMetadataRepository).findAll();
-    verify(fileMetadataMapper).toDtoList(metadataList);
-  }
-
-  @Test
-  void calculateTotalStorageUsageWhenNoFilesShouldReturnZero() {
-    // Given
-    when(fileMetadataRepository.findAll()).thenReturn(List.of());
-    when(fileMetadataMapper.toDtoList(any())).thenReturn(List.of());
-
-    // When
-    Long result = fileService.calculateTotalStorageUsage();
-
-    // Then
-    assertEquals(0L, result);
   }
 
   @Test

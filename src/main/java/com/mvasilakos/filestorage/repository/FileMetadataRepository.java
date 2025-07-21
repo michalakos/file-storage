@@ -19,17 +19,6 @@ import org.springframework.stereotype.Repository;
 public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID> {
 
   /**
-   * Return all files that the user is an owner of.
-   *
-   * @param owner user
-   * @return list of file metadata
-   */
-  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.owner = :user OR " + "(p.user = :user "
-      + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER)")
-  List<FileMetadata> findByOwner(@Param("user") User owner);
-
-  /**
    * Find file with given id for which the given user is an owner.
    *
    * @param id    file id
@@ -64,17 +53,21 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
       @Param("user") User user);
 
   /**
-   * Find file with given id which the given user has access to.
+   * Calculate total size of all files owned by the user.
    *
-   * @param filename file name
-   * @param user     user
-   * @return file metadata
+   * @param owner the user
+   * @return total size in bytes, or 0 if no files found
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.filename = :filename AND " + "(f.owner = :user OR " + "(p.user = :user "
-      + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER))")
-  Optional<FileMetadata> findByFilenameAndOwner(@Param("filename") String filename,
-      @Param("user") User user);
+  @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f WHERE f.owner = :owner")
+  Long sumSizeByOwner(@Param("owner") User owner);
+
+  /**
+   * Calculate total storage usage across all files.
+   *
+   * @return total size in bytes, or 0 if no files found
+   */
+  @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f")
+  Long calculateTotalStorageUsage();
 
   /**
    * Find all files with a size that exceeds the given size in bytes.
