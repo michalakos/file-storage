@@ -24,28 +24,22 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param owner user
    * @return list of file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f "
-      + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.owner = :user OR "
-      + "(p.user = :user "
+  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
+      + "WHERE f.owner = :user OR " + "(p.user = :user "
       + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER)")
   List<FileMetadata> findByOwner(@Param("user") User owner);
 
   /**
    * Find file with given id for which the given user is an owner.
    *
-   * @param id file id
+   * @param id    file id
    * @param owner user
    * @return file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f "
-      + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.id = :id AND "
-      + "(f.owner = :user OR "
-      + "(p.user = :user "
+  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
+      + "WHERE f.id = :id AND " + "(f.owner = :user OR " + "(p.user = :user "
       + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER))")
-  Optional<FileMetadata> findByIdAndOwner(@Param("id") UUID id,
-      @Param("user") User owner);
+  Optional<FileMetadata> findByIdAndOwner(@Param("id") UUID id, @Param("user") User owner);
 
   /**
    * Find all files that the given user has access to.
@@ -53,23 +47,33 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param owner user
    * @return list of file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f "
-      + "LEFT JOIN f.sharedWith p "
+  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
       + "WHERE f.owner = :user OR p.user = :user")
   List<FileMetadata> findByOwnerOrSharedWith(@Param("user") User owner);
 
   /**
    * Find file with given id which the given user has access to.
    *
-   * @param id file id
+   * @param id   file id
    * @param user user
    * @return file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f "
-      + "LEFT JOIN f.sharedWith p "
+  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
       + "WHERE f.id = :id AND (f.owner = :user OR p.user = :user)")
-  Optional<FileMetadata> findByIdAndOwnerOrSharedWith(
-      @Param("id") UUID id,
+  Optional<FileMetadata> findByIdAndOwnerOrSharedWith(@Param("id") UUID id,
+      @Param("user") User user);
+
+  /**
+   * Find file with given id which the given user has access to.
+   *
+   * @param filename file name
+   * @param user     user
+   * @return file metadata
+   */
+  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
+      + "WHERE f.filename = :filename AND " + "(f.owner = :user OR " + "(p.user = :user "
+      + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER))")
+  Optional<FileMetadata> findByFilenameAndOwner(@Param("filename") String filename,
       @Param("user") User user);
 
   /**

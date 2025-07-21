@@ -31,7 +31,7 @@ import lombok.ToString.Exclude;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 @ToString
 public class FileMetadata {
 

@@ -39,11 +39,11 @@ public class FileService {
   /**
    * Constructor.
    *
-   * @param fileMetadataRepository fileMetadataRepository
-   * @param fileMetadataMapper fileMetadataMapper
+   * @param fileMetadataRepository   fileMetadataRepository
+   * @param fileMetadataMapper       fileMetadataMapper
    * @param filePermissionRepository filePermissionRepository
-   * @param userService userService
-   * @param storagePath storagePath
+   * @param userService              userService
+   * @param storagePath              storagePath
    */
   public FileService(
       FileMetadataRepository fileMetadataRepository,
@@ -70,7 +70,7 @@ public class FileService {
   /**
    * Store file.
    *
-   * @param file file
+   * @param file  file
    * @param owner the user who stored the file
    * @return file metadata
    */
@@ -102,10 +102,26 @@ public class FileService {
   }
 
   /**
+   * Change the file's name.
+   *
+   * @param fileId      file id
+   * @param newFilename new file name
+   * @param user        user who wants to change the file name
+   * @return file metadata
+   */
+  public FileMetadataDto renameFile(UUID fileId, String newFilename, User user) {
+    FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, user)
+        .orElseThrow(() -> new RuntimeException("File not found"));
+    metadata.setFilename(newFilename);
+    fileMetadataRepository.save(metadata);
+    return fileMetadataMapper.toDto(metadata);
+  }
+
+  /**
    * Get metadata for a file.
    *
    * @param fileId file id
-   * @param user user who wants to access the file
+   * @param user   user who wants to access the file
    * @return file metadata
    */
   public FileMetadataDto getFileMetadata(UUID fileId, User user) {
@@ -118,7 +134,7 @@ public class FileService {
    * Get file data.
    *
    * @param fileId file id
-   * @param user user who wants to access the file
+   * @param user   user who wants to access the file
    * @return file content
    */
   public Resource loadFileAsResource(UUID fileId, User user) {
@@ -128,7 +144,7 @@ public class FileService {
     Path filePath = rootLocation.resolve(metadata.getStoragePath());
     try {
       Resource resource = new UrlResource(filePath.toUri());
-      if (resource.exists() || resource.isReadable()) {
+      if (resource.exists() && resource.isReadable()) {
         return resource;
       } else {
         throw new RuntimeException("Could not read file");
@@ -183,7 +199,7 @@ public class FileService {
    * Delete a file.
    *
    * @param fileId file id
-   * @param owner user who wants to delete the file
+   * @param owner  user who wants to delete the file
    */
   public void deleteFile(UUID fileId, User owner) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
@@ -199,10 +215,10 @@ public class FileService {
   /**
    * Share a file with another user.
    *
-   * @param fileId file id
+   * @param fileId   file id
    * @param username username of the user that we want to share the file with
    * @param readOnly the user should only be able to have read/download access to the file
-   * @param owner user who wants to share the file
+   * @param owner    user who wants to share the file
    */
   public void shareFile(UUID fileId, String username, boolean readOnly, User owner) {
     FilePermission filePermission = new FilePermission();

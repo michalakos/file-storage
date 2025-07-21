@@ -128,7 +128,7 @@ class FileServiceTest {
             filePermissionRepository,
             userService,
             invalidStoragePath
-    ));
+        ));
 
     assertEquals("Could not initialize storage", exception.getMessage());
     assertInstanceOf(IOException.class, exception.getCause());
@@ -389,6 +389,60 @@ class FileServiceTest {
 
     assertEquals("Failed to store file", exception.getMessage());
     verify(fileMetadataRepository, never()).save(any());
+  }
+
+  @Test
+  void renameFileShouldChangeFileNameAndReturnMetadata() {
+    // Given
+    String newFilename = "newTest.txt";
+    FileMetadata renamedFileMetadata = testFileMetadata
+        .toBuilder()
+        .filename(newFilename)
+        .build();
+    FileMetadataDto renamedFileMetadataDto = testFileMetadataDto
+        .toBuilder()
+        .filename(newFilename)
+        .build();
+
+    when(fileMetadataRepository.findByIdAndOwner(testFileId, ownerUser))
+        .thenReturn(Optional.ofNullable(testFileMetadata));
+    when(fileMetadataRepository.save(renamedFileMetadata)).thenReturn(renamedFileMetadata);
+    when(fileMetadataMapper.toDto(renamedFileMetadata)).thenReturn(renamedFileMetadataDto);
+
+    // When
+    FileMetadataDto result = fileService.renameFile(
+        testFileMetadata.getId(), newFilename, ownerUser);
+
+    // Then
+    assertNotNull(result);
+    assertEquals(renamedFileMetadataDto, result);
+
+    ArgumentCaptor<FileMetadata> metadataCaptor = ArgumentCaptor.forClass(FileMetadata.class);
+    verify(fileMetadataRepository).save(metadataCaptor.capture());
+    FileMetadata savedMetadata = metadataCaptor.getValue();
+
+    assertEquals(newFilename, savedMetadata.getFilename());
+    assertEquals(renamedFileMetadata.getContentType(), savedMetadata.getContentType());
+    assertEquals(renamedFileMetadata.getSize(), savedMetadata.getSize());
+    assertEquals(ownerUser, savedMetadata.getOwner());
+    assertNotNull(savedMetadata.getId());
+    assertNotNull(savedMetadata.getUploadDate());
+  }
+
+  @Test
+  void renameFileShouldThrowIfNoFileIsFoundForThisOwner() {
+    // Given
+    String newFilename = "newTest.txt";
+    when(fileMetadataRepository.findByIdAndOwner(testFileId, ownerUser))
+        .thenReturn(Optional.empty());
+
+    // When & Then
+    RuntimeException exception = assertThrows(RuntimeException.class,
+        () -> fileService.renameFile(testFileMetadata.getId(), newFilename, ownerUser));
+
+    assertEquals("File not found", exception.getMessage());
+    verify(fileMetadataRepository, never()).save(any());
+    verify(fileMetadataMapper, never()).toDto(any());
   }
 
   @Test

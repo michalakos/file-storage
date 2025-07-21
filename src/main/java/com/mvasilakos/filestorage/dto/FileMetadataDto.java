@@ -16,7 +16,7 @@ import lombok.Builder;
  * @param storagePath storage path
  * @param userDto details of the user that uploaded it
  */
-@Builder
+@Builder(toBuilder = true)
 public record FileMetadataDto(
     UUID id,
     String filename,

@@ -42,13 +42,9 @@ A minimal Spring Boot-based file storage application with user authentication an
    ```
 
 ## TODOs:
-* Allow renaming of files
 * Compress files when uploading
-* If user has uploaded file of the same name as him if he wants it overwritten
 * Custom exceptions
 * Implement limit for storage per user
-* Implement size limit for single file
-* Write unit tests
 * Secure files (only accept certain types of files / virus scan)
 * Better authentication
 * Connect with persistent database (dockerized?)
@@ -56,3 +52,5 @@ A minimal Spring Boot-based file storage application with user authentication an
 * GUI
 * Users that are not owners should not be able to share a file
 * Validate user details (email/password)
+* If user has uploaded file of the same name ask him if he wants it overwritten
+* Implement size limit for single file
