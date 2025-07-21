@@ -43,14 +43,11 @@ A minimal Spring Boot-based file storage application with user authentication an
 
 ## TODOs:
 * Compress files when uploading
+* Encrypt files
 * Custom exceptions
-* Implement limit for storage per user
 * Secure files (only accept certain types of files / virus scan)
-* Better authentication
+* Better authentication (jwt?)
 * Connect with persistent database (dockerized?)
 * Dockerize
 * GUI
-* Users that are not owners should not be able to share a file
-* Validate user details (email/password)
-* If user has uploaded file of the same name ask him if he wants it overwritten
 * Implement size limit for single file
