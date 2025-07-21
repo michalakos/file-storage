@@ -2,18 +2,27 @@ package com.mvasilakos.filestorage.controller;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
 import com.mvasilakos.filestorage.dto.RenameFileRequest;
+import com.mvasilakos.filestorage.dto.ShareFileRequest;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.service.FileService;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,11 +35,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 /**
- * File controller.
+ * File controller for managing file operations.
  */
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
+@Validated
+@Slf4j
 public class FileController {
 
   private final FileService fileService;
@@ -42,9 +53,11 @@ public class FileController {
    * @param owner the user uploading the file
    * @return uploaded file's metadata
    */
-  @PostMapping
-  public ResponseEntity<FileMetadataDto> uploadFile(@RequestParam("file") MultipartFile file,
+  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<FileMetadataDto> uploadFile(@RequestParam("file") @Valid MultipartFile file,
       @AuthenticationPrincipal User owner) {
+
+    log.debug("Uploading file: {} for user: {}", file.getOriginalFilename(), owner.getUsername());
     FileMetadataDto metadata = fileService.storeFile(file, owner);
     return ResponseEntity.status(HttpStatus.CREATED).body(metadata);
   }
@@ -52,11 +65,12 @@ public class FileController {
   /**
    * List all files that the given user can access.
    *
-   * @param user the user that is signed in
+   * @param user the authenticated user
    * @return list of file metadata
    */
   @GetMapping
   public ResponseEntity<List<FileMetadataDto>> listFiles(@AuthenticationPrincipal User user) {
+    log.debug("Listing files for user: {}", user.getUsername());
     List<FileMetadataDto> metadata = fileService.listUserFiles(user);
     return ResponseEntity.ok(metadata);
   }
@@ -65,12 +79,14 @@ public class FileController {
    * Get metadata for file with given id for the given user if they have access to it.
    *
    * @param id   file's id
-   * @param user the user that is logged in
+   * @param user the authenticated user
    * @return file metadata
    */
   @GetMapping("/{id}")
-  public ResponseEntity<FileMetadataDto> getFileMetadata(@PathVariable UUID id,
+  public ResponseEntity<FileMetadataDto> getFileMetadata(@PathVariable @Valid UUID id,
       @AuthenticationPrincipal User user) {
+
+    log.debug("Getting metadata for file: {} by user: {}", id, user.getUsername());
     FileMetadataDto metadata = fileService.getFileMetadata(id, user);
     return ResponseEntity.ok(metadata);
   }
@@ -79,18 +95,34 @@ public class FileController {
    * Download a file if the user has access to it.
    *
    * @param id   id of the file to download
-   * @param user the user that is logged in
-   * @return file data
+   * @param user the authenticated user
+   * @return file data with appropriate headers
    */
-  @GetMapping("/{id}/data")
-  public ResponseEntity<Resource> downloadFile(@PathVariable UUID id,
+  @GetMapping("/{id}/download")
+  public ResponseEntity<Resource> downloadFile(@PathVariable @Valid UUID id,
       @AuthenticationPrincipal User user) {
+
+    log.debug("Downloading file: {} by user: {}", id, user.getUsername());
     Resource resource = fileService.loadFileAsResource(id, user);
     FileMetadataDto metadata = fileService.getFileMetadata(id, user);
 
-    return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
-            "attachment; filename=\"" + metadata.filename() + "\"")
-        .header(HttpHeaders.CONTENT_TYPE, metadata.contentType()).body(resource);
+    ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"" + sanitizeFilename(metadata.filename()) + "\"")
+        .header(HttpHeaders.CONTENT_TYPE, metadata.contentType());
+
+    // Try to set content length, but don't fail if we can't determine it
+    try {
+      long contentLength = resource.contentLength();
+      if (contentLength >= 0) {
+        responseBuilder.header(HttpHeaders.CONTENT_LENGTH, String.valueOf(contentLength));
+      }
+    } catch (IOException e) {
+      log.warn("Could not determine content length for file: {}", id, e);
+      // Continue without content-length header
+    }
+
+    return responseBuilder.body(resource);
   }
 
   /**
@@ -98,12 +130,15 @@ public class FileController {
    *
    * @param id            file id
    * @param renameRequest request object containing new file name
-   * @param user          user that is logged in
-   * @return file data
+   * @param user          authenticated user
+   * @return updated file metadata
    */
   @PatchMapping("/{id}/rename")
-  public ResponseEntity<FileMetadataDto> renameFile(@PathVariable UUID id,
+  public ResponseEntity<FileMetadataDto> renameFile(@PathVariable @Valid UUID id,
       @RequestBody @Valid RenameFileRequest renameRequest, @AuthenticationPrincipal User user) {
+
+    log.debug("Renaming file: {} to: {} by user: {}", id, renameRequest.getNewFileName(),
+        user.getUsername());
 
     FileMetadataDto fileMetadataDto = fileService.renameFile(id, renameRequest.getNewFileName(),
         user);
@@ -111,32 +146,64 @@ public class FileController {
   }
 
   /**
-   * Delete the given file if the user has permission to do it.
+   * Delete a file if the user has permission to do it.
    *
-   * @param id    the id of the file to be deleted.
-   * @param owner the user that is logged in.
-   * @return nothing
+   * @param id   the id of the file to be deleted
+   * @param user the authenticated user
+   * @return no content response
    */
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> deleteFile(@PathVariable UUID id,
-      @AuthenticationPrincipal User owner) {
-    fileService.deleteFile(id, owner);
+  public ResponseEntity<Void> deleteFile(@PathVariable @Valid UUID id,
+      @AuthenticationPrincipal User user) {
+
+    log.debug("Deleting file: {} by user: {}", id, user.getUsername());
+    fileService.deleteFile(id, user);
     return ResponseEntity.noContent().build();
   }
 
   /**
-   * Share a file with another user. The user sharing the file must have access to it.
+   * Share a file with another user. The user sharing the file must have owner access to it.
    *
-   * @param fileId   file id
-   * @param username the username of the user we want to share the file with
-   * @param readOnly the user should only have access to view/download the file
-   * @param owner    the user that is logged in
-   * @return nothing
+   * @param fileId       file id
+   * @param shareRequest request object containing sharing details
+   * @param owner        the authenticated user
+   * @return no content response
    */
-  @PostMapping("/share/{fileId}/{username}/{readOnly}")
-  public ResponseEntity<Void> shareFile(@PathVariable UUID fileId, @PathVariable String username,
-      @PathVariable boolean readOnly, @AuthenticationPrincipal User owner) {
-    fileService.shareFile(fileId, username, readOnly, owner);
+  @PostMapping("/{fileId}/share")
+  public ResponseEntity<Void> shareFile(@PathVariable("fileId") @Valid UUID fileId,
+      @RequestBody @Valid ShareFileRequest shareRequest, @AuthenticationPrincipal User owner) {
+
+    log.debug("Sharing file: {} with user: {} (readOnly: {}) by owner: {}", fileId,
+        shareRequest.getUsername(), shareRequest.isReadOnly(), owner.getUsername());
+
+    fileService.shareFile(fileId, shareRequest.getUsername(), shareRequest.isReadOnly(), owner);
     return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Sanitize filename for Content-Disposition header to prevent header injection.
+   *
+   * @param filename the original filename
+   * @return sanitized filename
+   */
+  private String sanitizeFilename(String filename) {
+    if (filename == null) {
+      return "download";
+    }
+    return filename.replaceAll("[\"\\\\]", "_");
+  }
+
+  /**
+   * Global exception handler for validation errors.
+   */
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<Map<String, String>> handleValidationErrors(
+      MethodArgumentNotValidException ex) {
+
+    Map<String, String> errors = new HashMap<>();
+    ex.getBindingResult().getFieldErrors()
+        .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
+
+    return ResponseEntity.badRequest().body(errors);
   }
 }

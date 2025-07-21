@@ -1,6 +1,6 @@
 package com.mvasilakos.filestorage.controller;
 
-import com.mvasilakos.filestorage.dto.AuthRequestDto;
+import com.mvasilakos.filestorage.dto.AuthRequest;
 import com.mvasilakos.filestorage.dto.UserDto;
 import com.mvasilakos.filestorage.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class AuthController {
    * @return new user's information
    */
   @PostMapping("/register")
-  public ResponseEntity<UserDto> register(@RequestBody AuthRequestDto request) {
+  public ResponseEntity<UserDto> register(@RequestBody AuthRequest request) {
     UserDto registeredUser = userService.registerUser(
         request.username(),
         request.password(),

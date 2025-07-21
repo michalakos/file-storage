@@ -1,6 +1,6 @@
 package com.mvasilakos.filestorage.controller;
 
-import com.mvasilakos.filestorage.dto.AuthRequestDto;
+import com.mvasilakos.filestorage.dto.AuthRequest;
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
 import com.mvasilakos.filestorage.dto.UserDto;
 import com.mvasilakos.filestorage.service.AdminService;
@@ -72,7 +72,7 @@ public class AdminController {
    * @return user details
    */
   @PostMapping("/register")
-  public ResponseEntity<UserDto> register(@RequestBody AuthRequestDto request) {
+  public ResponseEntity<UserDto> register(@RequestBody AuthRequest request) {
     UserDto registeredUser = adminService.registerAdmin(
         request.username(),
         request.password(),

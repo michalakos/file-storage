@@ -8,4 +8,4 @@ package com.mvasilakos.filestorage.dto;
  * @param password password
  * @param email email
  */
-public record AuthRequestDto(String username, String password, String email) {}
+public record AuthRequest(String username, String password, String email) {}
