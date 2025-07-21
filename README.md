@@ -42,12 +42,11 @@ A minimal Spring Boot-based file storage application with user authentication an
    ```
 
 ## TODOs:
-* Compress files when uploading
-* Encrypt files
-* Custom exceptions
 * Secure files (only accept certain types of files / virus scan)
+* Compress -> Encrypt files
+* Custom exceptions
 * Better authentication (jwt?)
 * Connect with persistent database (dockerized?)
 * Dockerize
 * GUI
-* Implement size limit for single file
+* Use streams for handling upload/download of large files
