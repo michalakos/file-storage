@@ -15,7 +15,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
-import com.mvasilakos.filestorage.exception.FileStorageException;
 import com.mvasilakos.filestorage.exception.StorageLimitExceededException;
 import com.mvasilakos.filestorage.mapper.FileMetadataMapper;
 import com.mvasilakos.filestorage.model.FileAccessLevel;
@@ -24,6 +23,7 @@ import com.mvasilakos.filestorage.model.FilePermission;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.FilePermissionRepository;
+import com.mvasilakos.filestorage.validator.FileValidator;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -60,6 +60,9 @@ class FileServiceTest {
   private UserService userService;
 
   @Mock
+  private FileValidator fileValidator;
+
+  @Mock
   private MultipartFile multipartFile;
 
   @TempDir
@@ -80,6 +83,7 @@ class FileServiceTest {
         fileMetadataRepository,
         fileMetadataMapper,
         filePermissionRepository,
+        fileValidator,
         userService,
         tempDir.toString()
     );
@@ -130,6 +134,7 @@ class FileServiceTest {
             fileMetadataRepository,
             fileMetadataMapper,
             filePermissionRepository,
+            fileValidator,
             userService,
             invalidStoragePath
         ));
@@ -137,29 +142,6 @@ class FileServiceTest {
     assertEquals("Could not initialize storage", exception.getMessage());
     assertInstanceOf(IOException.class, exception.getCause());
   }
-
-  @Test
-  void storeFileWithNullFilenameShouldThrowWhenNullFilename() {
-    // Given
-    when(multipartFile.getOriginalFilename()).thenReturn(null);
-
-    // When & Then
-    assertThrows(FileStorageException.class,
-        () -> fileService.storeFile(multipartFile, ownerUser));
-    verify(fileMetadataRepository, never()).save(any());
-  }
-
-  @Test
-  void storeFileWithNullFilenameShouldThrowWhenEmptyFilename() {
-    // Given
-    when(multipartFile.getOriginalFilename()).thenReturn(" ");
-
-    // When & Then
-    assertThrows(FileStorageException.class,
-        () -> fileService.storeFile(multipartFile, ownerUser));
-    verify(fileMetadataRepository, never()).save(any());
-  }
-
 
   @Test
   void storeFileWithNullContentTypeShouldHandleNullContentType() throws IOException {
@@ -225,7 +207,6 @@ class FileServiceTest {
     long size = Long.MAX_VALUE;
 
     // Given
-    when(multipartFile.getOriginalFilename()).thenReturn(originalFilename);
     when(multipartFile.getSize()).thenReturn(size);
 
     // When & Then

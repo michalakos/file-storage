@@ -10,6 +10,7 @@ import com.mvasilakos.filestorage.model.FilePermission;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.FilePermissionRepository;
+import com.mvasilakos.filestorage.validator.FileValidator;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -40,6 +41,7 @@ public class FileService {
   private final FileMetadataMapper fileMetadataMapper;
   private final FileMetadataRepository fileMetadataRepository;
   private final FilePermissionRepository filePermissionRepository;
+  private final FileValidator fileValidator;
   private final UserService userService;
   private final Path rootLocation;
 
@@ -56,11 +58,13 @@ public class FileService {
       FileMetadataRepository fileMetadataRepository,
       FileMetadataMapper fileMetadataMapper,
       FilePermissionRepository filePermissionRepository,
+      FileValidator fileValidator,
       UserService userService,
       @Value("${storage.location}") String storagePath) {
     this.fileMetadataMapper = fileMetadataMapper;
     this.fileMetadataRepository = fileMetadataRepository;
     this.filePermissionRepository = filePermissionRepository;
+    this.fileValidator = fileValidator;
     this.userService = userService;
     this.rootLocation = Paths.get(storagePath).toAbsolutePath().normalize();
     initStorage();
@@ -83,7 +87,7 @@ public class FileService {
    * @throws FileStorageException if storage fails or limits are exceeded
    */
   public FileMetadataDto storeFile(MultipartFile file, User owner) {
-    validateFile(file);
+    fileValidator.validateFile(file);
 
     long userStorageUsed = calculateUserTotalStorage(owner);
     long fileSize = file.getSize();
@@ -96,15 +100,6 @@ public class FileService {
       return fileMetadataMapper.toDto(savedMetadata);
     } catch (IOException e) {
       throw new FileStorageException("Failed to store file: " + file.getOriginalFilename(), e);
-    }
-  }
-
-  private void validateFile(MultipartFile file) {
-    if (file.isEmpty()) {
-      throw new FileStorageException("Cannot store empty file");
-    }
-    if (file.getOriginalFilename() == null || file.getOriginalFilename().trim().isEmpty()) {
-      throw new FileStorageException("File must have a valid filename");
     }
   }
 

@@ -42,9 +42,7 @@ A minimal Spring Boot-based file storage application with user authentication an
    ```
 
 ## TODOs:
-* Secure files (only accept certain types of files / virus scan)
 * Compress -> Encrypt files
-* Custom exceptions
 * Better authentication (jwt?)
 * Connect with persistent database (dockerized?)
 * Dockerize
