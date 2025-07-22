@@ -49,6 +49,9 @@ public class FileMetadata {
   private Long size;
 
   @Column(nullable = false)
+  private Long originalFileSize;
+
+  @Column(nullable = false)
   private LocalDateTime uploadDate;
 
   @Column(nullable = false, unique = true)

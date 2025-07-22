@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FileMetadataMapper implements EntityMapper<FileMetadata, FileMetadataDto> {
 
+  private final UserMapper userMapper;
+
   @Override
   public FileMetadataDto toDto(FileMetadata entity) {
     if (entity == null) {
@@ -24,7 +26,10 @@ public class FileMetadataMapper implements EntityMapper<FileMetadata, FileMetada
         .filename(entity.getFilename())
         .contentType(entity.getContentType())
         .size(entity.getSize())
+        .originalFileSize(entity.getOriginalFileSize())
         .uploadDate(entity.getUploadDate())
+        .storagePath(entity.getStoragePath())
+        .userDto(userMapper.toDto(entity.getOwner()))
         .build();
   }
 

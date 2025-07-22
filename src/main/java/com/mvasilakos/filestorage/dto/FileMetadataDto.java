@@ -8,13 +8,13 @@ import lombok.Builder;
 /**
  * Dto for file metadata.
  *
- * @param id file's id
- * @param filename name of the file
+ * @param id          file's id
+ * @param filename    name of the file
  * @param contentType file type
- * @param size size in bytes
- * @param uploadDate upload date
+ * @param size        size in bytes
+ * @param uploadDate  upload date
  * @param storagePath storage path
- * @param userDto details of the user that uploaded it
+ * @param userDto     details of the user that uploaded it
  */
 @Builder(toBuilder = true)
 public record FileMetadataDto(
@@ -22,7 +22,10 @@ public record FileMetadataDto(
     String filename,
     String contentType,
     Long size,
+    Long originalFileSize,
     LocalDateTime uploadDate,
     String storagePath,
     UserDto userDto
-) {}
+) {
+
+}

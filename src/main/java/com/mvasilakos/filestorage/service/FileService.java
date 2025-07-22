@@ -11,20 +11,22 @@ import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.FilePermissionRepository;
 import com.mvasilakos.filestorage.validator.FileValidator;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -90,15 +92,44 @@ public class FileService {
     fileValidator.validateFile(file);
 
     long userStorageUsed = calculateUserTotalStorage(owner);
-    long fileSize = file.getSize();
-    validateStorageLimit(userStorageUsed, fileSize);
+    long originalFileSize = file.getSize();
+    validateStorageLimit(userStorageUsed, originalFileSize);
 
     FileMetadata metadata = createFileMetadata(file, owner);
+
     try {
-      saveFileToStorage(file, metadata.getStoragePath());
+      Path storagePath = rootLocation.resolve(metadata.getStoragePath());
+      Files.createDirectories(storagePath.getParent());
+
+      try (InputStream inputStream = file.getInputStream();
+          OutputStream fileOutputStream = Files.newOutputStream(storagePath);
+          GZIPOutputStream gzipOutputStream = new GZIPOutputStream(fileOutputStream)) {
+
+        // Copy the file content through the compression stream
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+          gzipOutputStream.write(buffer, 0, bytesRead);
+        }
+      }
+
+      long compressedFileSize = Files.size(storagePath);
+      metadata.setSize(compressedFileSize);
+      metadata.setOriginalFileSize(originalFileSize);
+
       FileMetadata savedMetadata = fileMetadataRepository.save(metadata);
       return fileMetadataMapper.toDto(savedMetadata);
+
     } catch (IOException e) {
+      Path storagePath = rootLocation.resolve(metadata.getStoragePath());
+      try {
+        if (Files.exists(storagePath)) {
+          Files.delete(storagePath);
+        }
+      } catch (IOException deleteException) {
+        System.err.println("Failed to clean up partially stored file: " + storagePath + " due to: "
+            + deleteException.getMessage());
+      }
       throw new FileStorageException("Failed to store file: " + file.getOriginalFilename(), e);
     }
   }
@@ -162,15 +193,6 @@ public class FileService {
     return String.format("%s_%s", id, filename);
   }
 
-  private void saveFileToStorage(MultipartFile file, String storagePath) throws IOException {
-    Path targetPath = rootLocation.resolve(storagePath);
-    // Ensure parent directory exists
-    Files.createDirectories(targetPath.getParent());
-    try (InputStream inputStream = file.getInputStream()) {
-      Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-    }
-  }
-
   /**
    * Change the file's name.
    *
@@ -209,18 +231,32 @@ public class FileService {
    */
   public Resource loadFileAsResource(UUID fileId, User user) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user)
-        .orElseThrow(() -> new RuntimeException("File not found"));
-
+        .orElseThrow(() -> new FileStorageException("File not found for ID: " + fileId));
     Path filePath = rootLocation.resolve(metadata.getStoragePath());
+
+    if (!Files.exists(filePath)) {
+      throw new FileStorageException("Stored file not found on disk at path: " + filePath);
+    }
+    if (!Files.isReadable(filePath)) {
+      throw new FileStorageException("File is not readable at path: " + filePath);
+    }
+
     try {
-      Resource resource = new UrlResource(filePath.toUri());
-      if (resource.exists() && resource.isReadable()) {
-        return resource;
-      } else {
-        throw new RuntimeException("Could not read file");
+      // Read and decompress into memory
+      byte[] decompressedData;
+      try (InputStream compressedStream = Files.newInputStream(filePath);
+          GZIPInputStream decompressedStream = new GZIPInputStream(compressedStream);
+          ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+        decompressedStream.transferTo(outputStream);
+        decompressedData = outputStream.toByteArray();
       }
-    } catch (MalformedURLException e) {
-      throw new RuntimeException("Could not read file", e);
+
+      return new ByteArrayResource(decompressedData);
+
+    } catch (IOException e) {
+      throw new FileStorageException("Failed to read or decompress file: " + metadata.getFilename(),
+          e);
     }
   }
 

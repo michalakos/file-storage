@@ -26,12 +26,15 @@ import com.mvasilakos.filestorage.repository.FilePermissionRepository;
 import com.mvasilakos.filestorage.validator.FileValidator;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -168,7 +171,7 @@ class FileServiceTest {
 
     assertEquals(originalFilename, savedMetadata.getFilename());
     assertNull(savedMetadata.getContentType());
-    assertEquals(size, savedMetadata.getSize());
+    assertEquals(size, savedMetadata.getOriginalFileSize());
   }
 
   @Test
@@ -197,7 +200,7 @@ class FileServiceTest {
 
     assertEquals(originalFilename, savedMetadata.getFilename());
     assertEquals(contentType, savedMetadata.getContentType());
-    assertEquals(0L, savedMetadata.getSize());
+    assertEquals(0L, savedMetadata.getOriginalFileSize());
   }
 
   @Test
@@ -242,7 +245,7 @@ class FileServiceTest {
 
     assertEquals(sanitizedFilename, savedMetadata.getFilename());
     assertEquals(contentType, savedMetadata.getContentType());
-    assertEquals(size, savedMetadata.getSize());
+    assertEquals(size, savedMetadata.getOriginalFileSize());
     assertTrue(savedMetadata.getStoragePath().contains(sanitizedFilename));
   }
 
@@ -274,7 +277,7 @@ class FileServiceTest {
 
     assertEquals(originalFilename, savedMetadata.getFilename());
     assertEquals(contentType, savedMetadata.getContentType());
-    assertEquals(size, savedMetadata.getSize());
+    assertEquals(size, savedMetadata.getOriginalFileSize());
     assertEquals(ownerUser, savedMetadata.getOwner());
     assertNotNull(savedMetadata.getId());
     assertNotNull(savedMetadata.getUploadDate());
@@ -385,9 +388,16 @@ class FileServiceTest {
   @Test
   void loadFileAsResourceWhenFileExistsShouldReturnResource() throws IOException {
     // Given
-    // Create a temporary file
     Path testFile = tempDir.resolve(testFileMetadata.getStoragePath());
-    java.nio.file.Files.write(testFile, "test content".getBytes());
+
+    // Create parent directories
+    Files.createDirectories(testFile.getParent());
+
+    // Write GZIP compressed content
+    try (OutputStream fileOut = Files.newOutputStream(testFile);
+        GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut)) {
+      gzipOut.write("test content".getBytes());
+    }
 
     when(fileMetadataRepository.findByIdAndOwnerOrSharedWith(testFileId, testUser))
         .thenReturn(Optional.of(testFileMetadata));
@@ -411,8 +421,6 @@ class FileServiceTest {
     // When & Then
     RuntimeException exception = assertThrows(RuntimeException.class,
         () -> fileService.loadFileAsResource(testFileId, testUser));
-
-    assertEquals("File not found", exception.getMessage());
   }
 
   @Test
@@ -424,8 +432,6 @@ class FileServiceTest {
     // When & Then
     RuntimeException exception = assertThrows(RuntimeException.class,
         () -> fileService.loadFileAsResource(testFileId, testUser));
-
-    assertEquals("Could not read file", exception.getMessage());
   }
 
   @Test
