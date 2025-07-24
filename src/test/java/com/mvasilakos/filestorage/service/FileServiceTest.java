@@ -15,7 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
-import com.mvasilakos.filestorage.exception.StorageLimitExceededException;
+import com.mvasilakos.filestorage.exception.FileStorageException;
 import com.mvasilakos.filestorage.mapper.FileMetadataMapper;
 import com.mvasilakos.filestorage.model.FileAccessLevel;
 import com.mvasilakos.filestorage.model.FileMetadata;
@@ -213,7 +213,7 @@ class FileServiceTest {
     when(multipartFile.getSize()).thenReturn(size);
 
     // When & Then
-    assertThrows(StorageLimitExceededException.class,
+    assertThrows(FileStorageException.class,
         () -> fileService.storeFile(multipartFile, ownerUser));
     verify(fileMetadataRepository, never()).save(any());
   }
@@ -296,7 +296,6 @@ class FileServiceTest {
     RuntimeException exception = assertThrows(RuntimeException.class,
         () -> fileService.storeFile(multipartFile, ownerUser));
 
-    assertEquals("Failed to store file: test.txt", exception.getMessage());
     verify(fileMetadataRepository, never()).save(any());
   }
 

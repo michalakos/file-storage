@@ -5,6 +5,9 @@ uploads/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+logs/
+*.log
+*.log.*
 
 ### STS ###
 .apt_generated

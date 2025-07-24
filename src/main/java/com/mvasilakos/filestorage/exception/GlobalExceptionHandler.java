@@ -1,5 +1,6 @@
 package com.mvasilakos.filestorage.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * Global exception handler.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -21,6 +23,31 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(RuntimeException.class)
   public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
+    log.error(ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+  }
+
+  /**
+   * Returns an HTTP bad request response in case of a file storage exception.
+   *
+   * @param ex raised exception
+   * @return HTTP response entity
+   */
+  @ExceptionHandler(FileStorageException.class)
+  public ResponseEntity<String> handleFileStorageException(FileStorageException ex) {
+    log.error(ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+  }
+
+  /**
+   * Returns an HTTP bad request response in case of an invalid file exception.
+   *
+   * @param ex raised exception
+   * @return HTTP response entity
+   */
+  @ExceptionHandler(InvalidFileException.class)
+  public ResponseEntity<String> handleInvalidFileException(InvalidFileException ex) {
+    log.error(ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
   }
 
@@ -33,4 +60,5 @@ public class GlobalExceptionHandler {
   public ResponseEntity<String> handleAccessDenied() {
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
   }
+
 }

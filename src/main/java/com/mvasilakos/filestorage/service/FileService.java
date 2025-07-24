@@ -2,7 +2,6 @@ package com.mvasilakos.filestorage.service;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
 import com.mvasilakos.filestorage.exception.FileStorageException;
-import com.mvasilakos.filestorage.exception.StorageLimitExceededException;
 import com.mvasilakos.filestorage.mapper.FileMetadataMapper;
 import com.mvasilakos.filestorage.model.FileAccessLevel;
 import com.mvasilakos.filestorage.model.FileMetadata;
@@ -130,7 +129,8 @@ public class FileService {
         System.err.println("Failed to clean up partially stored file: " + storagePath + " due to: "
             + deleteException.getMessage());
       }
-      throw new FileStorageException("Failed to store file: " + file.getOriginalFilename(), e);
+      throw new FileStorageException(
+          String.format("Failed to store file: \"%s\"", file.getOriginalFilename()), e);
     }
   }
 
@@ -138,7 +138,7 @@ public class FileService {
     if (userStorageUsed + fileSize > maxStoragePerUser) {
       long availableBytes = maxStoragePerUser - userStorageUsed;
 
-      throw new StorageLimitExceededException(
+      throw new FileStorageException(
           String.format("User storage limit exceeded. Used: %s, Available: %s, File size: %s",
               formatBytes(userStorageUsed),
               formatBytes(availableBytes),
@@ -255,8 +255,8 @@ public class FileService {
       return new ByteArrayResource(decompressedData);
 
     } catch (IOException e) {
-      throw new FileStorageException("Failed to read or decompress file: " + metadata.getFilename(),
-          e);
+      throw new FileStorageException(
+          String.format("Failed to read or decompress file: \"%s\"", metadata.getFilename()), e);
     }
   }
 

@@ -57,7 +57,8 @@ public class FileController {
   public ResponseEntity<FileMetadataDto> uploadFile(@RequestParam("file") @Valid MultipartFile file,
       @AuthenticationPrincipal User owner) {
 
-    log.debug("Uploading file: {} for user: {}", file.getOriginalFilename(), owner.getUsername());
+    log.debug("Uploading file: \"{}\" for user: {}",
+        file.getOriginalFilename(), owner.getUsername());
     FileMetadataDto metadata = fileService.storeFile(file, owner);
     return ResponseEntity.status(HttpStatus.CREATED).body(metadata);
   }
@@ -137,8 +138,7 @@ public class FileController {
   public ResponseEntity<FileMetadataDto> renameFile(@PathVariable @Valid UUID id,
       @RequestBody @Valid RenameFileRequest renameRequest, @AuthenticationPrincipal User user) {
 
-    log.debug("Renaming file: {} to: {} by user: {}", id, renameRequest.getNewFileName(),
-        user.getUsername());
+    log.debug("Renaming file: {} to: \"{}\"", id, renameRequest.getNewFileName());
 
     FileMetadataDto fileMetadataDto = fileService.renameFile(id, renameRequest.getNewFileName(),
         user);
