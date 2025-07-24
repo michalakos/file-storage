@@ -10,19 +10,13 @@ import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.FilePermissionRepository;
 import com.mvasilakos.filestorage.validator.FileValidator;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -33,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * File service.
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class FileService {
 
@@ -44,40 +40,10 @@ public class FileService {
   private final FilePermissionRepository filePermissionRepository;
   private final FileValidator fileValidator;
   private final UserService userService;
-  private final Path rootLocation;
+  private final FileEncryptionService fileEncryptionService;
+  private final FileCompressionService fileCompressionService;
+  private final FileStorageService fileStorageService;
 
-  /**
-   * Constructor.
-   *
-   * @param fileMetadataRepository   fileMetadataRepository
-   * @param fileMetadataMapper       fileMetadataMapper
-   * @param filePermissionRepository filePermissionRepository
-   * @param userService              userService
-   * @param storagePath              storagePath
-   */
-  public FileService(
-      FileMetadataRepository fileMetadataRepository,
-      FileMetadataMapper fileMetadataMapper,
-      FilePermissionRepository filePermissionRepository,
-      FileValidator fileValidator,
-      UserService userService,
-      @Value("${storage.location}") String storagePath) {
-    this.fileMetadataMapper = fileMetadataMapper;
-    this.fileMetadataRepository = fileMetadataRepository;
-    this.filePermissionRepository = filePermissionRepository;
-    this.fileValidator = fileValidator;
-    this.userService = userService;
-    this.rootLocation = Paths.get(storagePath).toAbsolutePath().normalize();
-    initStorage();
-  }
-
-  private void initStorage() {
-    try {
-      Files.createDirectories(rootLocation);
-    } catch (IOException e) {
-      throw new RuntimeException("Could not initialize storage", e);
-    }
-  }
 
   /**
    * Store file.
@@ -87,7 +53,7 @@ public class FileService {
    * @return file metadata DTO
    * @throws FileStorageException if storage fails or limits are exceeded
    */
-  public FileMetadataDto storeFile(MultipartFile file, User owner) {
+  public FileMetadataDto uploadFile(MultipartFile file, User owner) {
     fileValidator.validateFile(file);
 
     long userStorageUsed = calculateUserTotalStorage(owner);
@@ -97,40 +63,32 @@ public class FileService {
     FileMetadata metadata = createFileMetadata(file, owner);
 
     try {
-      Path storagePath = rootLocation.resolve(metadata.getStoragePath());
-      Files.createDirectories(storagePath.getParent());
+      FileEncryptionService.EncryptionResult encryptionResult =
+          fileEncryptionService.encryptStream(file.getInputStream());
 
-      try (InputStream inputStream = file.getInputStream();
-          OutputStream fileOutputStream = Files.newOutputStream(storagePath);
-          GZIPOutputStream gzipOutputStream = new GZIPOutputStream(fileOutputStream)) {
+      byte[] compressedData = fileCompressionService.compress(encryptionResult.encryptedData());
 
-        // Copy the file content through the compression stream
-        byte[] buffer = new byte[8192];
-        int bytesRead;
-        while ((bytesRead = inputStream.read(buffer)) != -1) {
-          gzipOutputStream.write(buffer, 0, bytesRead);
-        }
-      }
+      fileStorageService.storeEncryptedFile(
+          metadata.getStoragePath(),
+          encryptionResult.iv(),
+          compressedData
+      );
 
-      long compressedFileSize = Files.size(storagePath);
-      metadata.setSize(compressedFileSize);
+      long finalStoredFileSize = fileStorageService.getFileSize(metadata.getStoragePath());
+      metadata.setSize(finalStoredFileSize);
       metadata.setOriginalFileSize(originalFileSize);
 
       FileMetadata savedMetadata = fileMetadataRepository.save(metadata);
       return fileMetadataMapper.toDto(savedMetadata);
 
     } catch (IOException e) {
-      Path storagePath = rootLocation.resolve(metadata.getStoragePath());
-      try {
-        if (Files.exists(storagePath)) {
-          Files.delete(storagePath);
-        }
-      } catch (IOException deleteException) {
-        System.err.println("Failed to clean up partially stored file: " + storagePath + " due to: "
-            + deleteException.getMessage());
-      }
+      cleanupAfterUploadFail(metadata);
       throw new FileStorageException(
-          String.format("Failed to store file: \"%s\"", file.getOriginalFilename()), e);
+          String.format("Failed to process file: \"%s\"", file.getOriginalFilename()), e);
+    } catch (Exception e) {
+      cleanupAfterUploadFail(metadata);
+      throw new FileStorageException(
+          String.format("Failed to encrypt/store file: \"%s\"", file.getOriginalFilename()), e);
     }
   }
 
@@ -144,24 +102,6 @@ public class FileService {
               formatBytes(availableBytes),
               formatBytes(fileSize))
       );
-    }
-  }
-
-  /**
-   * Format bytes into MB with appropriate decimal places.
-   *
-   * @param bytes the number of bytes
-   * @return formatted string in MB
-   */
-  private String formatBytes(long bytes) {
-    double megabytes = bytes / (1024.0 * 1024.0);
-
-    if (megabytes >= 100) {
-      return String.format("%.0f MB", megabytes); // >= 100 MB: no decimals
-    } else if (megabytes >= 10) {
-      return String.format("%.1f MB", megabytes); // >= 10 MB: 1 decimal
-    } else {
-      return String.format("%.2f MB", megabytes); // < 10 MB: 2 decimals
     }
   }
 
@@ -181,6 +121,18 @@ public class FileService {
         .build();
   }
 
+  private String formatBytes(long bytes) {
+    double megabytes = bytes / (1024.0 * 1024.0);
+
+    if (megabytes >= 100) {
+      return String.format("%.0f MB", megabytes); // >= 100 MB: no decimals
+    } else if (megabytes >= 10) {
+      return String.format("%.1f MB", megabytes); // >= 10 MB: 1 decimal
+    } else {
+      return String.format("%.2f MB", megabytes); // < 10 MB: 2 decimals
+    }
+  }
+
   private String sanitizeFilename(String filename) {
     if (filename == null) {
       return "unknown";
@@ -193,6 +145,14 @@ public class FileService {
     return String.format("%s_%s", id, filename);
   }
 
+  private void cleanupAfterUploadFail(FileMetadata metadata) {
+    try {
+      fileStorageService.deleteFile(metadata.getStoragePath());
+    } catch (Exception e) {
+      log.warn("Failed to cleanup file after upload failure: {}", metadata.getStoragePath(), e);
+    }
+  }
+
   /**
    * Change the file's name.
    *
@@ -203,7 +163,7 @@ public class FileService {
    */
   public FileMetadataDto renameFile(UUID fileId, String newFilename, User user) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, user)
-        .orElseThrow(() -> new RuntimeException("File not found"));
+        .orElseThrow(() -> new FileStorageException("File not found"));
     metadata.setFilename(newFilename);
     fileMetadataRepository.save(metadata);
     return fileMetadataMapper.toDto(metadata);
@@ -218,7 +178,7 @@ public class FileService {
    */
   public FileMetadataDto getFileMetadata(UUID fileId, User user) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user)
-        .orElseThrow(() -> new RuntimeException("File not found"));
+        .orElseThrow(() -> new FileStorageException("File not found"));
     return fileMetadataMapper.toDto(metadata);
   }
 
@@ -229,34 +189,24 @@ public class FileService {
    * @param user   user who wants to access the file
    * @return file content
    */
-  public Resource loadFileAsResource(UUID fileId, User user) {
+  public Resource downloadFile(UUID fileId, User user) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user)
         .orElseThrow(() -> new FileStorageException("File not found for ID: " + fileId));
-    Path filePath = rootLocation.resolve(metadata.getStoragePath());
-
-    if (!Files.exists(filePath)) {
-      throw new FileStorageException("Stored file not found on disk at path: " + filePath);
-    }
-    if (!Files.isReadable(filePath)) {
-      throw new FileStorageException("File is not readable at path: " + filePath);
-    }
 
     try {
-      // Read and decompress into memory
-      byte[] decompressedData;
-      try (InputStream compressedStream = Files.newInputStream(filePath);
-          GZIPInputStream decompressedStream = new GZIPInputStream(compressedStream);
-          ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+      FileStorageService.StoredFileData storedData = fileStorageService.readEncryptedFile(
+          metadata.getStoragePath());
 
-        decompressedStream.transferTo(outputStream);
-        decompressedData = outputStream.toByteArray();
-      }
+      byte[] encryptedData = fileCompressionService.decompress(
+          storedData.compressedEncryptedData());
 
-      return new ByteArrayResource(decompressedData);
+      byte[] originalData = fileEncryptionService.decrypt(encryptedData, storedData.iv());
 
-    } catch (IOException e) {
+      return new ByteArrayResource(originalData);
+
+    } catch (Exception e) {
       throw new FileStorageException(
-          String.format("Failed to read or decompress file: \"%s\"", metadata.getFilename()), e);
+          String.format("Failed to process file: \"%s\"", metadata.getFilename()), e);
     }
   }
 
@@ -313,13 +263,9 @@ public class FileService {
    */
   public void deleteFile(UUID fileId, User owner) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
-        .orElseThrow(() -> new RuntimeException("File not found"));
-    try {
-      Files.delete(rootLocation.resolve(metadata.getStoragePath()));
-      fileMetadataRepository.delete(metadata);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to delete file", e);
-    }
+        .orElseThrow(() -> new FileStorageException("File not found"));
+    fileStorageService.deleteFile(metadata.getStoragePath());
+    fileMetadataRepository.delete(metadata);
   }
 
   /**
@@ -335,7 +281,7 @@ public class FileService {
     Optional<FileMetadata> fileMetadataOptional = fileMetadataRepository
         .findByIdAndOwner(fileId, owner);
     if (fileMetadataOptional.isEmpty()) {
-      throw new RuntimeException("No file found with id: " + fileId + " and owner: " + owner);
+      throw new FileStorageException("No file found with id: " + fileId + " and owner: " + owner);
     }
 
     FileMetadata fileMetadata = fileMetadataOptional.get();

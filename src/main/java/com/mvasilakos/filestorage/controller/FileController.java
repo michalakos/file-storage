@@ -59,7 +59,7 @@ public class FileController {
 
     log.debug("Uploading file: \"{}\" for user: {}",
         file.getOriginalFilename(), owner.getUsername());
-    FileMetadataDto metadata = fileService.storeFile(file, owner);
+    FileMetadataDto metadata = fileService.uploadFile(file, owner);
     return ResponseEntity.status(HttpStatus.CREATED).body(metadata);
   }
 
@@ -104,7 +104,7 @@ public class FileController {
       @AuthenticationPrincipal User user) {
 
     log.debug("Downloading file: {} by user: {}", id, user.getUsername());
-    Resource resource = fileService.loadFileAsResource(id, user);
+    Resource resource = fileService.downloadFile(id, user);
     FileMetadataDto metadata = fileService.getFileMetadata(id, user);
 
     ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok()

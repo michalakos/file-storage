@@ -28,30 +28,6 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Returns an HTTP bad request response in case of a file storage exception.
-   *
-   * @param ex raised exception
-   * @return HTTP response entity
-   */
-  @ExceptionHandler(FileStorageException.class)
-  public ResponseEntity<String> handleFileStorageException(FileStorageException ex) {
-    log.error(ex.getMessage(), ex);
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-  }
-
-  /**
-   * Returns an HTTP bad request response in case of an invalid file exception.
-   *
-   * @param ex raised exception
-   * @return HTTP response entity
-   */
-  @ExceptionHandler(InvalidFileException.class)
-  public ResponseEntity<String> handleInvalidFileException(InvalidFileException ex) {
-    log.error(ex.getMessage(), ex);
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-  }
-
-  /**
    * Returns an HTTP forbidden response in case of access denied exception.
    *
    * @return HTTP response entity

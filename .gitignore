@@ -8,6 +8,7 @@ uploads/
 logs/
 *.log
 *.log.*
+config/
 
 ### STS ###
 .apt_generated

@@ -33,21 +33,19 @@ spring:
 server:
   port: 8080
 
-# Custom Storage Configuration
-storage:
-  location: ./uploads
-
 file:
   storage:
     max-file-size: 30_000_000
     max-storage-per-user: 500_000_000
 
-# Admin Configuration
+# App Configuration
 app:
   admin:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@example.com}
     password: ${ADMIN_PASSWORD:}
+  storage:
+    location: ./uploads
 
 # Logging Configuration
 logging:
