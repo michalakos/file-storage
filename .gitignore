@@ -8,7 +8,7 @@ uploads/
 logs/
 *.log
 *.log.*
-config/
+config/encryption.key
 
 ### STS ###
 .apt_generated

@@ -33,6 +33,11 @@ spring:
 server:
   port: 8080
 
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 3600 # 1 hour in milliseconds
+
 file:
   storage:
     max-file-size: 30_000_000
@@ -51,6 +56,8 @@ app:
 logging:
   level:
     com.mvasilakos.filestorage: DEBUG
+#    org.springframework: DEBUG
+#    org.springframework.security: DEBUG
 #    org.springframework.web: DEBUG
     root: INFO
 

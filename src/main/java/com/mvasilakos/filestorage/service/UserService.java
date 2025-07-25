@@ -10,6 +10,8 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.validator.routines.EmailValidator;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +33,7 @@ public class UserService {
    *
    * @param username username
    * @param password password
-   * @param email email address
+   * @param email    email address
    * @return new user details
    */
   public UserDto registerUser(String username, String password, String email) {
@@ -47,8 +49,8 @@ public class UserService {
    *
    * @param username username
    * @param password password
-   * @param email email address
-   * @param isAdmin true if the new user is an admin
+   * @param email    email address
+   * @param isAdmin  true if the new user is an admin
    * @return new user details
    */
   public UserDto registerUser(String username, String password, String email, boolean isAdmin) {
@@ -116,13 +118,25 @@ public class UserService {
   /**
    * Find a user by their username.
    *
-   * @param userId user id
+   * @param username username
    * @return user
    */
-  protected User findByUsername(String userId) {
-    Optional<User> userOptional = userRepository.findByUsername(userId);
+  public User findByUsername(String username) {
+    Optional<User> userOptional = userRepository.findByUsername(username);
     return userOptional.orElseThrow(() -> new IllegalArgumentException("User not found"));
   }
+
+  /**
+   * Find user details by their username.
+   *
+   * @param username username
+   * @return user details
+   */
+  public UserDetails findUserDetailsByUsername(String username) {
+    return userRepository.findByUsername(username)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+  }
+
 
   /**
    * Persist the user.
