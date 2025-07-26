@@ -9,6 +9,7 @@ logs/
 *.log
 *.log.*
 config/encryption.key
+.env
 
 ### STS ###
 .apt_generated

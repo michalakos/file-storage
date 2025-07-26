@@ -43,6 +43,6 @@ A minimal Spring Boot-based file storage application with user authentication an
 
 ## TODOs:
 * Add monitoring (elk?)
-* Connect with persistent database (dockerized?)
+* Add flyway / liquibase schema migration
 * Dockerize
 * GUI
