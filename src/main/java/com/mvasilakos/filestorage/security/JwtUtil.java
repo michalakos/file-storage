@@ -1,5 +1,6 @@
 package com.mvasilakos.filestorage.security;
 
+import com.mvasilakos.filestorage.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -39,6 +40,36 @@ public class JwtUtil {
   }
 
   /**
+   * Extract role from token.
+   *
+   * @param token jwt token
+   * @return user role
+   */
+  public String extractRole(String token) {
+    return extractClaim(token, claims -> (String) claims.get("role"));
+  }
+
+  /**
+   * Extract user ID from token.
+   *
+   * @param token jwt token
+   * @return user ID
+   */
+  public String extractUserId(String token) {
+    return extractClaim(token, claims -> (String) claims.get("userId"));
+  }
+
+  /**
+   * Extract email from token.
+   *
+   * @param token jwt token
+   * @return user email
+   */
+  public String extractEmail(String token) {
+    return extractClaim(token, claims -> (String) claims.get("email"));
+  }
+
+  /**
    * Extract expiration date from token.
    *
    * @param token jwt token
@@ -74,13 +105,42 @@ public class JwtUtil {
   }
 
   /**
-   * Generate new token.
+   * Generate new token with user details and role.
    *
    * @param userDetails user details
    * @return jwt token
    */
   public String generateToken(UserDetails userDetails) {
     Map<String, Object> claims = new HashMap<>();
+
+    if (userDetails instanceof User user) {
+      claims.put("role", user.getRole().name().toLowerCase());
+      claims.put("userId", user.getId().toString());
+      claims.put("email", user.getEmail());
+      claims.put("enabled", user.isEnabled());
+    }
+
+    return createToken(claims, userDetails.getUsername());
+  }
+
+  /**
+   * Generate token with custom claims.
+   *
+   * @param extraClaims additional claims to include
+   * @param userDetails user details
+   * @return jwt token
+   */
+  public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+    Map<String, Object> claims = new HashMap<>(extraClaims);
+
+    // Add user information to claims if userDetails is our User entity
+    if (userDetails instanceof User user) {
+      claims.put("role", user.getRole().name().toLowerCase());
+      claims.put("userId", user.getId().toString());
+      claims.put("email", user.getEmail());
+      claims.put("enabled", user.isEnabled());
+    }
+
     return createToken(claims, userDetails.getUsername());
   }
 
@@ -105,4 +165,27 @@ public class JwtUtil {
     final String username = extractUsername(token);
     return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
   }
+
+  /**
+   * Check if user has admin role based on token.
+   *
+   * @param token jwt token
+   * @return true if user is admin
+   */
+  public Boolean isAdmin(String token) {
+    String role = extractRole(token);
+    return "admin".equals(role);
+  }
+
+  /**
+   * Check if user has user role based on token.
+   *
+   * @param token jwt token
+   * @return true if user is regular user
+   */
+  public Boolean isUser(String token) {
+    String role = extractRole(token);
+    return "user".equals(role);
+  }
+
 }
