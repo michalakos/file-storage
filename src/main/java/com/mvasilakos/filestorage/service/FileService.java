@@ -10,6 +10,7 @@ import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.FilePermissionRepository;
 import com.mvasilakos.filestorage.validator.FileValidator;
+import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -261,6 +262,7 @@ public class FileService {
    * @param fileId file id
    * @param owner  user who wants to delete the file
    */
+  @Transactional
   public void deleteFile(UUID fileId, User owner) {
     FileMetadata metadata = fileMetadataRepository.findByIdAndOwner(fileId, owner)
         .orElseThrow(() -> new FileStorageException("File not found"));

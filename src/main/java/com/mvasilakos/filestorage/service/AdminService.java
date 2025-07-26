@@ -49,6 +49,15 @@ public class AdminService {
   }
 
   /**
+   * Delete user.
+   *
+   * @param username username of the user to delete
+   */
+  public void deleteUser(String username) {
+    userService.deleteUsersAccount(username);
+  }
+
+  /**
    * Ban user.
    *
    * @param userId id of the user to ban

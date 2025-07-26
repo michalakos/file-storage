@@ -32,6 +32,15 @@ capabilities.
 
 ---
 
+### Account Management
+
+| Method | Endpoint          | Description         |
+|--------|-------------------|---------------------|
+| GET    | /api/user/account | Get account details |
+| DELETE | /api/auth/account | Delete account      |
+
+---
+
 ### File Management
 
 | Method | Endpoint                  | Description                  |
@@ -60,6 +69,7 @@ capabilities.
 | GET    | /api/admin/large-files/{size} | Get files larger than given size (in bytes) |
 | GET    | /api/admin/storage            | Get total storage used                      |
 | GET    | /api/admin/logs/{lines}       | Get recent application logs (last N lines)  |
+| DELETE | /api/admin/users/{username}   | Delete a user's account                     |
 
 ## Setup
 

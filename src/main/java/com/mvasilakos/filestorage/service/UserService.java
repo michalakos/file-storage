@@ -1,11 +1,14 @@
 package com.mvasilakos.filestorage.service;
 
 import com.mvasilakos.filestorage.dto.UserDto;
+import com.mvasilakos.filestorage.exception.GenericException;
+import com.mvasilakos.filestorage.exception.UserException;
 import com.mvasilakos.filestorage.mapper.UserMapper;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.model.UserRole;
 import com.mvasilakos.filestorage.repository.UserRepository;
 import com.mvasilakos.filestorage.validator.PasswordValidator;
+import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +31,41 @@ public class UserService {
   private final UserMapper userMapper;
   private final PasswordEncoder passwordEncoder;
 
+  /**
+   * Delete user's own account.
+   *
+   * @param user the user who wants to delete their account
+   */
+  @Transactional
+  public void deleteOwnAccount(User user) {
+    try {
+      userRepository.deleteById(user.getId());
+    } catch (Exception e) {
+      throw new GenericException(
+          String.format("Couldn't delete user with id=%s and username=%s", user.getId(),
+              user.getUsername()), e);
+    }
+  }
+
+  /**
+   * Delete user's account.
+   *
+   * @param username the username of the user to delete
+   */
+  @Transactional
+  public void deleteUsersAccount(String username) {
+    User user = userRepository.findByUsername(username)
+        .orElseThrow(() -> new IllegalArgumentException(
+            String.format("Couldn't find user with username=%s", username)));
+
+    try {
+      userRepository.deleteById(user.getId());
+    } catch (Exception e) {
+      throw new GenericException(
+          String.format("Couldn't delete user with id=%s and username=%s", user.getId(), username),
+          e);
+    }
+  }
 
   /**
    * Register a new user.
@@ -106,6 +144,18 @@ public class UserService {
   public List<UserDto> searchUser(String searchTerm) {
     List<User> users = userRepository.searchUser(searchTerm);
     return userMapper.toDtoList(users);
+  }
+
+  /**
+   * Search for a user based on their username or email, given a keyword.
+   *
+   * @param id user id
+   * @return user
+   */
+  public UserDto getAccountDetails(UUID id) {
+    User user = userRepository.findById(id)
+        .orElseThrow(() -> new UserException(String.format("No user with id=%s found", id)));
+    return userMapper.toDto(user);
   }
 
   /**

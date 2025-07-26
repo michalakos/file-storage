@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -78,6 +79,18 @@ public class AdminController {
         request.password(),
         request.email());
     return ResponseEntity.ok(registeredUser);
+  }
+
+  /**
+   * Deletes user with the given username.
+   *
+   * @param username username of the user to delete
+   * @return nothing
+   */
+  @DeleteMapping("/users/{username}")
+  public ResponseEntity<Void> deleteUser(@PathVariable String username) {
+    adminService.deleteUser(username);
+    return ResponseEntity.noContent().build();
   }
 
   /**
