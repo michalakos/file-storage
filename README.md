@@ -73,5 +73,4 @@ capabilities.
 ## TODOs:
 
 * Add monitoring (elk?)
-* Add flyway / liquibase schema migration
 * GUI
