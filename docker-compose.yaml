@@ -15,9 +15,10 @@ services:
       - filestorage-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-filestorage_user} -d ${DB_NAME:-filestorage}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 1s
 
   # Optional: pgAdmin for database management
   pgadmin:
@@ -36,6 +37,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - filestorage-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    container_name: filestorage-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
     networks:
       - filestorage-network
 
