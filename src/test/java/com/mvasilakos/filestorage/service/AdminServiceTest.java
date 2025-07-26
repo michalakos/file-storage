@@ -16,6 +16,9 @@ import com.mvasilakos.filestorage.dto.FileMetadataDto;
 import com.mvasilakos.filestorage.dto.UserDto;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.model.UserRole;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import org.springframework.test.util.ReflectionTestUtils;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -221,29 +224,25 @@ class AdminServiceTest {
   }
 
   @Test
-  void getActiveSessionCountShouldReturnPlaceholderValue() {
-    // When
-    Integer result = adminService.getActiveSessionCount();
-
-    // Then
-    assertEquals(0, result);
-    // No service calls expected as this is a placeholder implementation
-    verifyNoInteractions(fileService, userService);
-  }
-
-  @Test
-  void getApplicationLogsShouldReturnPlaceholderValue() {
+  void getApplicationLogsShouldReturnFirstLinesFromTempLogFile() throws IOException {
     // Given
-    int lineCount = 100;
+    int lineCount = 2;
+    Path tempLog = Files.createTempFile("test-log", ".log");
+    Files.write(tempLog, List.of("Line 1", "Line 2", "Line 3"));
+
+    ReflectionTestUtils.setField(adminService, "logfile", tempLog.toString());
 
     // When
     String result = adminService.getApplicationLogs(lineCount);
 
     // Then
-    assertEquals("Recent logs...", result);
-    // No service calls expected as this is a placeholder implementation
+    assertEquals("Line 1" + System.lineSeparator() + "Line 2", result);
     verifyNoInteractions(fileService, userService);
+
+    // Cleanup
+    Files.deleteIfExists(tempLog);
   }
+
 
   @Test
   void banUserWhenUserNotFoundShouldPropagateException() {

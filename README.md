@@ -59,7 +59,6 @@ capabilities.
 | GET    | /api/admin/files              | Get metadata for all uploaded files         |
 | GET    | /api/admin/large-files/{size} | Get files larger than given size (in bytes) |
 | GET    | /api/admin/storage            | Get total storage used                      |
-| GET    | /api/admin/sessions           | Get number of active sessions               |
 | GET    | /api/admin/logs/{lines}       | Get recent application logs (last N lines)  |
 
 ## Setup

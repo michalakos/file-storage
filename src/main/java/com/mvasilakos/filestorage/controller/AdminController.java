@@ -53,8 +53,8 @@ public class AdminController {
   }
 
   /**
-   * Searches for a user with a username or email similar to the given keyword and returns
-   * all relevant users.
+   * Searches for a user with a username or email similar to the given keyword and returns all
+   * relevant users.
    *
    * @param keyword search keyword
    * @return a list of user details matching the keyword
@@ -107,7 +107,7 @@ public class AdminController {
   /**
    * Changes the role of the user (admin/user).
    *
-   * @param id id of the user whose role will change
+   * @param id   id of the user whose role will change
    * @param role the role which we want the user to have
    * @return nothing
    */
@@ -138,17 +138,6 @@ public class AdminController {
   public ResponseEntity<Long> getTotalStorageUsed() {
     Long bytes = adminService.getTotalStorageUsed();
     return ResponseEntity.ok(bytes);
-  }
-
-  /**
-   * Return the total amount of active sessions.
-   *
-   * @return the number of sessions
-   */
-  @GetMapping("/sessions")
-  public ResponseEntity<Integer> getActiveSessionCount() {
-    Integer sessions = adminService.getActiveSessionCount();
-    return ResponseEntity.ok(sessions);
   }
 
   /**

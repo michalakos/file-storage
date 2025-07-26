@@ -5,6 +5,7 @@ import com.mvasilakos.filestorage.mapper.UserMapper;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.model.UserRole;
 import com.mvasilakos.filestorage.repository.UserRepository;
+import com.mvasilakos.filestorage.validator.PasswordValidator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,7 +64,6 @@ public class UserService {
     return userMapper.toDto(registeredUser);
   }
 
-  // FIXME: add password and email validation
   private void validateNewUser(String username, String password, String email) {
     if (userRepository.existsByUsername(username)) {
       throw new IllegalArgumentException("Username already exists");
@@ -71,6 +71,10 @@ public class UserService {
       throw new IllegalArgumentException("Email already exists");
     } else if (!EmailValidator.getInstance().isValid(email)) {
       throw new IllegalArgumentException("Invalid email");
+    } else if (!PasswordValidator.validatePassword(password)) {
+      throw new IllegalArgumentException(
+          "Password must contain at least one lowercase letter, one uppercase letter, one number, "
+              + "one special character and be between 8 and 20 characters long.");
     }
   }
 

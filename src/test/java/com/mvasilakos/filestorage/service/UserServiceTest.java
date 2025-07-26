@@ -69,9 +69,9 @@ class UserServiceTest {
   void registerUserValidDataShouldReturnUserDto() {
     // Arrange
     String username = "newUser";
-    String password = "password123";
+    String password = "Pass!word123";
     String email = "new@example.com";
-    String encodedPassword = "encodedPassword123";
+    String encodedPassword = "encodedPass!word123";
 
     when(userRepository.existsByUsername(username)).thenReturn(false);
     when(userRepository.existsByEmail(email)).thenReturn(false);
@@ -96,15 +96,36 @@ class UserServiceTest {
   }
 
   @Test
+  void registerUserInvalidPasswordShouldThrow() {
+    // Arrange
+    String username = "newUser";
+    String password = "password123";
+    String email = "new@example.com";
+    String encodedPassword = "encodedPassword123";
+
+    when(userRepository.existsByUsername(username)).thenReturn(false);
+    when(userRepository.existsByEmail(email)).thenReturn(false);
+
+    // Act
+    assertThrows(IllegalArgumentException.class,
+        () -> userService.registerUser(username, password, email)
+    );
+
+    verify(userRepository).existsByUsername(username);
+    verify(userRepository).existsByEmail(email);
+    verify(userRepository, never()).save(any(User.class));
+  }
+
+  @Test
   void registerUserWithAdminFlagShouldReturnAdminUserDto() {
     // Arrange
     String username = "adminUser";
     String email = "admin@example.com";
-    String password = "password123";
+    String password = "Pass!word123";
 
     when(userRepository.existsByUsername(username)).thenReturn(false);
     when(userRepository.existsByEmail(email)).thenReturn(false);
-    when(passwordEncoder.encode(password)).thenReturn("encodedPassword123");
+    when(passwordEncoder.encode(password)).thenReturn("encodedPass!word123");
 
     User adminUser = new User();
     adminUser.setRole(UserRole.ADMIN);
@@ -123,13 +144,13 @@ class UserServiceTest {
   void registerUserWithAdminFlagFalseShouldReturnRegularUserDto() {
     // Arrange
     String username = "regularUser";
-    String password = "password123";
+    String password = "Pass!word123";
     String email = "regular@example.com";
     boolean isAdmin = false;
 
     when(userRepository.existsByUsername(username)).thenReturn(false);
     when(userRepository.existsByEmail(email)).thenReturn(false);
-    when(passwordEncoder.encode(password)).thenReturn("encodedPassword");
+    when(passwordEncoder.encode(password)).thenReturn("encodedPass!word123");
     when(userRepository.save(any(User.class))).thenReturn(testUser);
     when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -329,9 +350,9 @@ class UserServiceTest {
   void createUserShouldGenerateIdAndEncodePassword() {
     // Arrange
     String username = "testUser";
-    String password = "plainPassword";
+    String password = "Pass!word123";
     String email = "test@example.com";
-    String encodedPassword = "encodedPassword";
+    String encodedPassword = "encodedPass!word123";
 
     when(userRepository.existsByUsername(username)).thenReturn(false);
     when(userRepository.existsByEmail(email)).thenReturn(false);

@@ -2,22 +2,35 @@ package com.mvasilakos.filestorage.service;
 
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
 import com.mvasilakos.filestorage.dto.UserDto;
+import com.mvasilakos.filestorage.exception.GenericException;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.model.UserRole;
 import jakarta.transaction.Transactional;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 
 /**
  * Admin service.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminService {
+
+  @Value("${logging.file.name:}")
+  private String logfile;
 
   private final FileService fileService;
   private final UserService userService;
@@ -28,7 +41,7 @@ public class AdminService {
    *
    * @param username username
    * @param password password
-   * @param email email address
+   * @param email    email address
    * @return user details
    */
   public UserDto registerAdmin(String username, String password, String email) {
@@ -62,7 +75,7 @@ public class AdminService {
   /**
    * Change user role (e.g. from user to admin).
    *
-   * @param userId id of the user
+   * @param userId  id of the user
    * @param newRole the new role of the user
    */
   @Transactional
@@ -94,18 +107,6 @@ public class AdminService {
     return fileService.calculateTotalStorageUsage();
   }
 
-  // TODO: implement method
-  /**
-   * Return the amount of active sessions.
-   *
-   * @return number of active sessions.
-   */
-  public Integer getActiveSessionCount() {
-    // Query Spring Security or session management for active sessions
-    return 0; // Placeholder
-  }
-
-  // TODO: implement method
   /**
    * Return a number of the app's most recent log messages.
    *
@@ -113,8 +114,18 @@ public class AdminService {
    * @return log messages
    */
   public String getApplicationLogs(int lineCount) {
-    // Potentially read recent application logs (requires integration with logging framework)
-    return "Recent logs..."; // Placeholder
+    if (logfile.isEmpty()) {
+      throw new GenericException("No log file found");
+    }
+
+    Path logFilePath = Paths.get(logfile);
+    try (BufferedReader reader = Files.newBufferedReader(logFilePath)) {
+      return reader.lines().limit(lineCount)
+          .collect(Collectors.joining(System.lineSeparator()));
+
+    } catch (IOException e) {
+      throw new GenericException("Couldn't read log file", e);
+    }
   }
 
 }
