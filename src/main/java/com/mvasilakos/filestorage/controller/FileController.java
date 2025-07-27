@@ -77,6 +77,23 @@ public class FileController {
   }
 
   /**
+   * List most recent files that the given user can access, with an optional limit on returned items.
+   *
+   * @param user the authenticated user
+   * @param limit optional limit on number of files
+   * @return list of file metadata
+   */
+  @GetMapping("/recent")
+  public ResponseEntity<List<FileMetadataDto>> listRecentFiles(
+      @AuthenticationPrincipal User user,
+      @RequestParam(defaultValue = "10") int limit) {
+    log.debug("Listing {} most recent files for user: {}", limit, user.getUsername());
+    List<FileMetadataDto> metadata = fileService.listRecentUserFilesWithLimit(user, limit);
+    return ResponseEntity.ok(metadata);
+  }
+
+
+  /**
    * Get metadata for file with given id for the given user if they have access to it.
    *
    * @param id   file's id

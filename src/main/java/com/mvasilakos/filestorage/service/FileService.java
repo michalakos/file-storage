@@ -223,6 +223,18 @@ public class FileService {
   }
 
   /**
+   * List the most recent files that the user has access to.
+   *
+   * @param user user who wants to access the file
+   * @return list of file metadata
+   */
+  public List<FileMetadataDto> listRecentUserFilesWithLimit(User user, int limit) {
+    List<FileMetadata> fileMetadataList = fileMetadataRepository.findRecentFilesByOwnerOrSharedWithLimit(
+        user, limit);
+    return fileMetadataMapper.toDtoList(fileMetadataList);
+  }
+
+  /**
    * List all files stored in the system.
    *
    * @return list of file metadata
