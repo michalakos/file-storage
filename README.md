@@ -76,8 +76,7 @@ capabilities.
 1. Clone the repository
 2. Configure application.yaml (Optional)
 3. Add .env file based on .env.example (Optional)
-4. Package the application (mvn package)
-5. Start the containers `docker compose up -d`
+4. Start the containers `docker compose up -d`
 
 ## TODOs:
 
