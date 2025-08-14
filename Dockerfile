@@ -34,10 +34,4 @@ WORKDIR /app
 # Copy the built JAR from the builder stage
 COPY --from=builder /app/target/filestorage-0.0.1-SNAPSHOT.jar app.jar
 
-# Create a non-root user for security
-RUN addgroup -g 1001 -S appuser && \
-    adduser -u 1001 -S appuser -G appuser
-
-USER appuser
-
-ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=docker"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar", "--spring.profiles.active=docker"]
