@@ -6,6 +6,7 @@ import com.mvasilakos.filestorage.exception.UserException;
 import com.mvasilakos.filestorage.mapper.UserMapper;
 import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.model.UserRole;
+import com.mvasilakos.filestorage.repository.FileMetadataRepository;
 import com.mvasilakos.filestorage.repository.UserRepository;
 import com.mvasilakos.filestorage.validator.PasswordValidator;
 import jakarta.transaction.Transactional;
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.validator.routines.EmailValidator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,7 +29,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserService {
 
+  @Value("${file.storage.max-storage-per-user:1048576}")
+  private long maxStoragePerUser;
+
   private final UserRepository userRepository;
+  private final FileMetadataRepository fileMetadataRepository;
   private final UserMapper userMapper;
   private final PasswordEncoder passwordEncoder;
 
@@ -199,6 +205,26 @@ public class UserService {
    */
   public void saveUser(User user) {
     userRepository.save(user);
+  }
+
+  /**
+   * Calculate the user's used storage.
+   *
+   * @param user user
+   * @return the bytes of storage used
+   */
+  public long getUserStorageUsed(User user) {
+    return fileMetadataRepository.sumSizeByOwner(user);
+  }
+
+  /**
+   * Get the maximum allowed storage size for a single user.
+   *
+   * @return the storage in bytes
+   */
+  public long getStorageLimitPerUser(User user) {
+    // TODO: passing user variable to be able to get different storage limits per user
+    return maxStoragePerUser;
   }
 
 }

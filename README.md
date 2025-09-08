@@ -34,10 +34,12 @@ capabilities.
 
 ### Account Management
 
-| Method | Endpoint          | Description         |
-|--------|-------------------|---------------------|
-| GET    | /api/user/account | Get account details |
-| DELETE | /api/auth/account | Delete account      |
+| Method | Endpoint                    | Description                        |
+|--------|-----------------------------|------------------------------------|
+| GET    | /api/user/account           | Get account details                |
+| DELETE | /api/user/account           | Delete account                     |
+| GET    | /api/user/storage/used      | Get user's used storage            |
+| GET    | /api/user/storage/user-max  | Get user's maximum allowed storage |
 
 ---
 
