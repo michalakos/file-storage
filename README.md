@@ -36,24 +36,26 @@ capabilities.
 
 | Method | Endpoint                    | Description                        |
 |--------|-----------------------------|------------------------------------|
-| GET    | /api/user/account           | Get account details                |
-| DELETE | /api/user/account           | Delete account                     |
-| GET    | /api/user/storage/used      | Get user's used storage            |
-| GET    | /api/user/storage/user-max  | Get user's maximum allowed storage |
+| GET    | /api/users/account          | Get account details                |
+| DELETE | /api/users/account          | Delete account                     |
+| GET    | /api/users/storage/used     | Get user's used storage            |
+| GET    | /api/users/storage/user-max | Get user's maximum allowed storage |
+| GET    | /api/users/                 | Search user by username or email   |
 
 ---
 
 ### File Management
 
-| Method | Endpoint                  | Description                  |
-|--------|---------------------------|------------------------------|
-| POST   | /api/files                | Upload file                  |
-| GET    | /api/files                | List all user's files        |
-| GET    | /api/files/{id}           | Get file metadata            |
-| GET    | /api/files/{id}/download  | Download file                |
-| PATCH  | /api/files/{id}/rename    | Rename file                  |
-| DELETE | /api/files/{id}           | Delete file                  |
-| POST   | /api/files/{fileId}/share | Share file with another user |
+| Method | Endpoint                  | Description                                                    |
+|--------|---------------------------|----------------------------------------------------------------|
+| POST   | /api/files                | Upload file                                                    |
+| GET    | /api/files                | List all user's files                                          |
+| GET    | /api/files/{id}           | Get file metadata                                              |
+| GET    | /api/files/{id}/download  | Download file                                                  |
+| PATCH  | /api/files/{id}/rename    | Rename file                                                    |
+| DELETE | /api/files/{id}           | Delete file                                                    |
+| POST   | /api/files/{fileId}/share | Share file with another user                                   |
+| GET    | /api/files/paginated      | List all files that the given user can access, with pagination |
 
 ---
 

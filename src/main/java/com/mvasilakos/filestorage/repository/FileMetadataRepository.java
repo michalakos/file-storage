@@ -6,6 +6,7 @@ import com.mvasilakos.filestorage.model.User;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,8 +27,11 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param owner user
    * @return file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.id = :id AND " + "(f.owner = :user OR " + "(p.user = :user "
+  @Query("SELECT DISTINCT f FROM FileMetadata f "
+      + "LEFT JOIN f.sharedWith p "
+      + "WHERE f.id = :id AND "
+      + "(f.owner = :user OR "
+      + "(p.user = :user "
       + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER))")
   Optional<FileMetadata> findByIdAndOwner(@Param("id") UUID id, @Param("user") User owner);
 
@@ -37,9 +41,23 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param owner user
    * @return list of file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
+  @Query("SELECT DISTINCT f FROM FileMetadata f "
+      + "LEFT JOIN f.sharedWith p "
       + "WHERE f.owner = :user OR p.user = :user")
   List<FileMetadata> findByOwnerOrSharedWith(@Param("user") User owner);
+
+  /**
+   * Find all files that the given user has access to, with pagination.
+   *
+   * @param owner   the user who owns or has access to the files
+   * @param pageable pagination information (page number, size, sort)
+   * @return a page of file metadata
+   */
+  @Query("SELECT DISTINCT f FROM FileMetadata f "
+      + "LEFT JOIN f.sharedWith p "
+      + "WHERE f.owner = :user OR p.user = :user")
+  Page<FileMetadata> findByOwnerOrSharedWithPaginated(@Param("user") User owner, Pageable pageable);
+
 
   /**
    * Find file with given id which the given user has access to.
@@ -48,36 +66,12 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param user user
    * @return file metadata
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.id = :id AND (f.owner = :user OR p.user = :user)")
-  Optional<FileMetadata> findByIdAndOwnerOrSharedWith(@Param("id") UUID id,
-      @Param("user") User user);
-
-  /**
-   * Find the most recently uploaded files that the given user has access to (owns or shared with).
-   *
-   * @param user     user to check access for
-   * @param pageable pagination info (use PageRequest.of(0, limit) for top N results)
-   * @return list of recent file metadata ordered by upload date (newest first)
-   */
   @Query("SELECT DISTINCT f FROM FileMetadata f "
       + "LEFT JOIN f.sharedWith p "
-      + "WHERE f.owner = :user OR p.user = :user "
-      + "ORDER BY f.uploadDate DESC")
-  List<FileMetadata> findRecentFilesByOwnerOrSharedWith(@Param("user") User user,
-      Pageable pageable);
-
-  /**
-   * Find the most recently uploaded files owned by the given user.
-   *
-   * @param user owner of the files
-   * @param pageable pagination info (use PageRequest.of(0, limit) for top N results)
-   * @return list of recent file metadata owned by user, ordered by upload date (newest first)
-   */
-  @Query("SELECT f FROM FileMetadata f "
-      + "WHERE f.owner = :user "
-      + "ORDER BY f.uploadDate DESC")
-  List<FileMetadata> findRecentFilesByOwner(@Param("user") User user, Pageable pageable);
+      + "WHERE f.id = :id "
+      + "AND (f.owner = :user OR p.user = :user)")
+  Optional<FileMetadata> findByIdAndOwnerOrSharedWith(@Param("id") UUID id,
+      @Param("user") User user);
 
   /**
    * Find the most recently uploaded files that the given user has access to (owns or shared with).
@@ -87,7 +81,8 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param limit maximum number of files to return
    * @return list of recent file metadata ordered by upload date (newest first)
    */
-  @Query("SELECT DISTINCT f FROM FileMetadata f " + "LEFT JOIN f.sharedWith p "
+  @Query("SELECT DISTINCT f FROM FileMetadata f "
+      + "LEFT JOIN f.sharedWith p "
       + "WHERE f.owner = :user OR p.user = :user "
       + "ORDER BY f.uploadDate DESC "
       + "LIMIT :limit")
@@ -100,7 +95,8 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * @param owner the user
    * @return total size in bytes, or 0 if no files found
    */
-  @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f WHERE f.owner = :owner")
+  @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f "
+      + "WHERE f.owner = :owner")
   Long sumSizeByOwner(@Param("owner") User owner);
 
   /**

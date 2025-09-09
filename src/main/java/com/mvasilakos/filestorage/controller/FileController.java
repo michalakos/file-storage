@@ -14,6 +14,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -74,6 +75,24 @@ public class FileController {
     log.debug("Listing files for user: {}", user.getUsername());
     List<FileMetadataDto> metadata = fileService.listUserFiles(user);
     return ResponseEntity.ok(metadata);
+  }
+
+  /**
+   * List all files that the given user can access, with pagination.
+   *
+   * @param currentUser the authenticated user
+   * @param page the page number
+   * @param size the number of elements on the page
+   * @return list of file metadata
+   */
+  @GetMapping("/paginated")
+  public ResponseEntity<Page<FileMetadataDto>> getFiles(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+
+    Page<FileMetadataDto> files = fileService.listUserFilesPaginated(currentUser, page, size);
+    return ResponseEntity.ok(files);
   }
 
   /**

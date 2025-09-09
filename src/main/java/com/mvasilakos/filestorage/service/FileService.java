@@ -21,6 +21,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -223,6 +227,19 @@ public class FileService {
   }
 
   /**
+   * List the files that the user has access to.
+   *
+   * @param user user who wants to access the file
+   * @return list of file metadata
+   */
+  public Page<FileMetadataDto> listUserFilesPaginated(User user, int page, int size) {
+    Pageable pageable = PageRequest.of(page, size, Sort.by("uploadDate").descending());
+    Page<FileMetadata> fileMetadataPage = fileMetadataRepository
+        .findByOwnerOrSharedWithPaginated(user, pageable);
+    return fileMetadataPage.map(fileMetadataMapper::toDto);
+  }
+
+  /**
    * List the most recent files that the user has access to.
    *
    * @param user user who wants to access the file
@@ -300,6 +317,11 @@ public class FileService {
 
     FileMetadata fileMetadata = fileMetadataOptional.get();
     User user = userService.findByUsername(username);
+    Optional<FileMetadata> fileSharedWithUser = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user);
+    if (fileSharedWithUser.isPresent()) {
+      return;
+    }
+
     filePermission.setId(UUID.randomUUID());
     filePermission.setFileMetadata(fileMetadata);
     filePermission.setUser(user);
