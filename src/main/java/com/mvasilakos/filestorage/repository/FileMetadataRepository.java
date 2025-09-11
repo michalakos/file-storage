@@ -49,15 +49,49 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
   /**
    * Find all files that the given user has access to, with pagination.
    *
-   * @param owner   the user who owns or has access to the files
+   * @param user     the user who owns or has access to the files
    * @param pageable pagination information (page number, size, sort)
    * @return a page of file metadata
    */
   @Query("SELECT DISTINCT f FROM FileMetadata f "
       + "LEFT JOIN f.sharedWith p "
       + "WHERE f.owner = :user OR p.user = :user")
-  Page<FileMetadata> findByOwnerOrSharedWithPaginated(@Param("user") User owner, Pageable pageable);
+  Page<FileMetadata> findByOwnerOrSharedWithPaginated(@Param("user") User user, Pageable pageable);
 
+  /**
+   * Search all files that the given user has read only access to, but is not their owner, matching
+   * a keyword to their filename, with pagination.
+   *
+   * @param user     the user who owns or has access to the files
+   * @param keyword  the keyword to search for in filenames (should include wildcards)
+   * @param pageable pagination information (page number, size, sort)
+   * @return a page of file metadata
+   */
+  @Query("SELECT DISTINCT f FROM FileMetadata f "
+      + "LEFT JOIN f.sharedWith p "
+      + "WHERE p.user = :user "
+      + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.VIEW "
+      + "AND LOWER(f.filename) LIKE LOWER(:keyword)")
+  Page<FileMetadata> searchSharedWithPaginated(@Param("user") User user,
+      @Param("keyword") String keyword, Pageable pageable);
+
+  /**
+   * Search all files that the given user has owner access to, matching a keyword to their filename,
+   * with pagination.
+   *
+   * @param user     the user who owns or has access to the files
+   * @param keyword  the keyword to search for in filenames (should include wildcards)
+   * @param pageable pagination information (page number, size, sort)
+   * @return a page of file metadata
+   */
+  @Query("SELECT DISTINCT f FROM FileMetadata f "
+      + "LEFT JOIN f.sharedWith p "
+      + "WHERE (f.owner = :user "
+      + "OR (p.user = :user "
+      + "AND p.accessLevel = com.mvasilakos.filestorage.model.FileAccessLevel.OWNER)) "
+      + "AND LOWER(f.filename) LIKE LOWER(:keyword)")
+  Page<FileMetadata> searchOwnedPaginated(@Param("user") User user,
+      @Param("keyword") String keyword, Pageable pageable);
 
   /**
    * Find file with given id which the given user has access to.
@@ -77,7 +111,7 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
    * Find the most recently uploaded files that the given user has access to (owns or shared with).
    * Uses limit parameter instead of Pageable.
    *
-   * @param user user to check access for
+   * @param user  user to check access for
    * @param limit maximum number of files to return
    * @return list of recent file metadata ordered by upload date (newest first)
    */

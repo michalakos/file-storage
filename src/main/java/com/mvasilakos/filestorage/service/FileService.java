@@ -113,7 +113,7 @@ public class FileService {
   private FileMetadata createFileMetadata(MultipartFile file, User owner) {
     UUID id = UUID.randomUUID();
     String sanitizedFilename = sanitizeFilename(file.getOriginalFilename());
-    String storagePath = generateStoragePath(id, sanitizedFilename);
+    String storagePath = generateStoragePath(id);
 
     return FileMetadata.builder()
         .id(id)
@@ -143,11 +143,12 @@ public class FileService {
       return "unknown";
     }
     // Remove path traversal characters and other potentially dangerous chars
-    return filename.replaceAll("[^a-zA-Z0-9._-]", "_").trim();
+    return filename.trim();
   }
 
-  private String generateStoragePath(UUID id, String filename) {
-    return String.format("%s_%s", id, filename);
+  private String generateStoragePath(UUID id) {
+    LocalDateTime timestamp = LocalDateTime.now();
+    return String.format("%s_%s", id, timestamp);
   }
 
   private void cleanupAfterUploadFail(FileMetadata metadata) {
@@ -240,6 +241,26 @@ public class FileService {
   }
 
   /**
+   * Search all files that the given user has owner access to.
+   *
+   * @param user    current user
+   * @param keyword search keyword
+   * @param page    page number
+   * @param size    number of entries in page
+   * @return        file metadata
+   */
+  public Page<FileMetadataDto> searchUserFilesPaginated(
+      User user, String keyword, int page, int size) {
+
+    Pageable pageable = PageRequest.of(page, size, Sort.by("uploadDate").descending());
+    String searchKeyword = "%" + keyword + "%";
+
+    Page<FileMetadata> fileMetadataPage = fileMetadataRepository
+        .searchOwnedPaginated(user, searchKeyword, pageable);
+    return fileMetadataPage.map(fileMetadataMapper::toDto);
+  }
+
+  /**
    * List the most recent files that the user has access to.
    *
    * @param user user who wants to access the file
@@ -317,7 +338,8 @@ public class FileService {
 
     FileMetadata fileMetadata = fileMetadataOptional.get();
     User user = userService.findByUsername(username);
-    Optional<FileMetadata> fileSharedWithUser = fileMetadataRepository.findByIdAndOwnerOrSharedWith(fileId, user);
+    Optional<FileMetadata> fileSharedWithUser = fileMetadataRepository.findByIdAndOwnerOrSharedWith(
+        fileId, user);
     if (fileSharedWithUser.isPresent()) {
       return;
     }

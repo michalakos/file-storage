@@ -96,6 +96,26 @@ public class FileController {
   }
 
   /**
+   * Search all files that the given user can access, with pagination.
+   *
+   * @param currentUser the authenticated user
+   * @param page the page number
+   * @param size the number of elements on the page
+   * @return list of file metadata
+   */
+  @GetMapping("/paginated-search")
+  public ResponseEntity<Page<FileMetadataDto>> searchFiles(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam(defaultValue = "") String keyword,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+
+    Page<FileMetadataDto> files = fileService.searchUserFilesPaginated(
+        currentUser, keyword, page, size);
+    return ResponseEntity.ok(files);
+  }
+
+  /**
    * List most recent files that the given user can access, with an optional limit on returned items.
    *
    * @param user the authenticated user

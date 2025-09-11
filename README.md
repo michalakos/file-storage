@@ -32,7 +32,7 @@ capabilities.
 
 ---
 
-### Account Management
+### User Management
 
 | Method | Endpoint                    | Description                        |
 |--------|-----------------------------|------------------------------------|
@@ -46,16 +46,17 @@ capabilities.
 
 ### File Management
 
-| Method | Endpoint                  | Description                                                    |
-|--------|---------------------------|----------------------------------------------------------------|
-| POST   | /api/files                | Upload file                                                    |
-| GET    | /api/files                | List all user's files                                          |
-| GET    | /api/files/{id}           | Get file metadata                                              |
-| GET    | /api/files/{id}/download  | Download file                                                  |
-| PATCH  | /api/files/{id}/rename    | Rename file                                                    |
-| DELETE | /api/files/{id}           | Delete file                                                    |
-| POST   | /api/files/{fileId}/share | Share file with another user                                   |
-| GET    | /api/files/paginated      | List all files that the given user can access, with pagination |
+| Method | Endpoint                    | Description                                                      |
+|--------|-----------------------------|------------------------------------------------------------------|
+| POST   | /api/files                  | Upload file                                                      |
+| GET    | /api/files                  | List all user's files                                            |
+| GET    | /api/files/{id}             | Get file metadata                                                |
+| GET    | /api/files/{id}/download    | Download file                                                    |
+| PATCH  | /api/files/{id}/rename      | Rename file                                                      |
+| DELETE | /api/files/{id}             | Delete file                                                      |
+| POST   | /api/files/{fileId}/share   | Share file with another user                                     |
+| GET    | /api/files/paginated        | List all files that the given user can access, with pagination   |
+| GET    | /api/files/paginated-search | Search all files that the given user can access, with pagination |
 
 ---
 
@@ -84,5 +85,6 @@ capabilities.
 
 ## TODOs:
 
+* Investigate potential bug where a file can be shared with a user that already has access to it
 * Add monitoring (elk?)
 * GUI
