@@ -16,6 +16,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -150,6 +153,20 @@ public class UserService {
   public List<UserDto> searchUser(String searchTerm) {
     List<User> users = userRepository.searchUser(searchTerm);
     return userMapper.toDtoList(users);
+  }
+
+  /**
+   * Search for a user based on their username or email, given a keyword.
+   *
+   * @param searchTerm search keyword
+   * @param page       the page number
+   * @param size       the number of elements on the page
+   * @return list of matching users
+   */
+  public Page<UserDto> searchUserPaginated(String searchTerm, int page, int size) {
+    Pageable pageable = PageRequest.of(page, size);
+    Page<User> usersPage = userRepository.searchUserPaginated(searchTerm, pageable);
+    return usersPage.map(userMapper::toDto);
   }
 
   /**

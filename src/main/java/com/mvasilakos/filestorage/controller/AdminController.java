@@ -9,6 +9,7 @@ import com.mvasilakos.filestorage.service.UserService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 
@@ -60,9 +62,25 @@ public class AdminController {
    * @param keyword search keyword
    * @return a list of user details matching the keyword
    */
-  @GetMapping("/users/{keyword}")
-  public ResponseEntity<List<UserDto>> searchUser(@PathVariable String keyword) {
+  @GetMapping("/users/search")
+  public ResponseEntity<List<UserDto>> searchUser(@RequestParam(defaultValue = "") String keyword) {
     List<UserDto> users = userService.searchUser(keyword);
+    return ResponseEntity.ok(users);
+  }
+
+  /**
+   * Searches for a user with a username or email similar to the given keyword and returns all
+   * relevant users.
+   *
+   * @param keyword search keyword
+   * @return a list of user details matching the keyword
+   */
+  @GetMapping("/users/search-paginated")
+  public ResponseEntity<Page<UserDto>> searchUserPaginated(
+      @RequestParam(defaultValue = "") String keyword,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    Page<UserDto> users = userService.searchUserPaginated(keyword, page, size);
     return ResponseEntity.ok(users);
   }
 
@@ -143,7 +161,7 @@ public class AdminController {
   }
 
   /**
-   * Calculate the total storage size used for storing files.
+   * Calculate the total storage size in bytes used for storing files.
    *
    * @return the size in bytes
    */

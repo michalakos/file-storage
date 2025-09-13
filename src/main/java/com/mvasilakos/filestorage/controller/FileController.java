@@ -81,8 +81,8 @@ public class FileController {
    * List all files that the given user can access, with pagination.
    *
    * @param currentUser the authenticated user
-   * @param page the page number
-   * @param size the number of elements on the page
+   * @param page        the page number
+   * @param size        the number of elements on the page
    * @return list of file metadata
    */
   @GetMapping("/paginated")
@@ -99,8 +99,8 @@ public class FileController {
    * Search all files that the given user can access, with pagination.
    *
    * @param currentUser the authenticated user
-   * @param page the page number
-   * @param size the number of elements on the page
+   * @param page        the page number
+   * @param size        the number of elements on the page
    * @return list of file metadata
    */
   @GetMapping("/paginated-search")
@@ -116,9 +116,30 @@ public class FileController {
   }
 
   /**
-   * List most recent files that the given user can access, with an optional limit on returned items.
+   * Search all files that the given user has read-only access, with pagination.
    *
-   * @param user the authenticated user
+   * @param currentUser the authenticated user
+   * @param page        the page number
+   * @param size        the number of elements on the page
+   * @return list of file metadata
+   */
+  @GetMapping("/paginated-search-shared")
+  public ResponseEntity<Page<FileMetadataDto>> searchSharedFiles(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam(defaultValue = "") String keyword,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+
+    Page<FileMetadataDto> files = fileService.searchSharedFilesPaginated(
+        currentUser, keyword, page, size);
+    return ResponseEntity.ok(files);
+  }
+
+  /**
+   * List most recent files that the given user can access, with an optional limit on returned
+   * items.
+   *
+   * @param user  the authenticated user
    * @param limit optional limit on number of files
    * @return list of file metadata
    */

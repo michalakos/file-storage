@@ -241,13 +241,33 @@ public class FileService {
   }
 
   /**
+   * Search all files that the given user has read-only access to.
+   *
+   * @param user    current user
+   * @param keyword search keyword
+   * @param page    page number
+   * @param size    number of entries in page
+   * @return file metadata
+   */
+  public Page<FileMetadataDto> searchSharedFilesPaginated(
+      User user, String keyword, int page, int size) {
+
+    Pageable pageable = PageRequest.of(page, size, Sort.by("uploadDate").descending());
+    String searchKeyword = "%" + keyword + "%";
+
+    Page<FileMetadata> fileMetadataPage = fileMetadataRepository.searchSharedWithPaginated(
+        user, searchKeyword, pageable);
+    return fileMetadataPage.map(fileMetadataMapper::toDto);
+  }
+
+  /**
    * Search all files that the given user has owner access to.
    *
    * @param user    current user
    * @param keyword search keyword
    * @param page    page number
    * @param size    number of entries in page
-   * @return        file metadata
+   * @return file metadata
    */
   public Page<FileMetadataDto> searchUserFilesPaginated(
       User user, String keyword, int page, int size) {
@@ -255,8 +275,8 @@ public class FileService {
     Pageable pageable = PageRequest.of(page, size, Sort.by("uploadDate").descending());
     String searchKeyword = "%" + keyword + "%";
 
-    Page<FileMetadata> fileMetadataPage = fileMetadataRepository
-        .searchOwnedPaginated(user, searchKeyword, pageable);
+    Page<FileMetadata> fileMetadataPage = fileMetadataRepository.searchOwnedPaginated(
+        user, searchKeyword, pageable);
     return fileMetadataPage.map(fileMetadataMapper::toDto);
   }
 
@@ -267,8 +287,8 @@ public class FileService {
    * @return list of file metadata
    */
   public List<FileMetadataDto> listRecentUserFilesWithLimit(User user, int limit) {
-    List<FileMetadata> fileMetadataList = fileMetadataRepository.findRecentFilesByOwnerOrSharedWithLimit(
-        user, limit);
+    List<FileMetadata> fileMetadataList = fileMetadataRepository
+        .findRecentFilesByOwnerOrSharedWithLimit(user, limit);
     return fileMetadataMapper.toDtoList(fileMetadataList);
   }
 
