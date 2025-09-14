@@ -63,20 +63,22 @@ capabilities.
 
 ### Admin Operations
 
-| Method | Endpoint                          | Description                                 |
-|--------|-----------------------------------|---------------------------------------------|
-| POST   | /api/admin/register               | Register new admin                          |
-| POST   | /api/admin/ban/{id}               | Ban user by ID                              |
-| POST   | /api/admin/unban/{id}             | Unban user by ID                            |
-| POST   | /api/admin/role/{id}/{role}       | Change user's role                          |
-| GET    | /api/admin/users                  | Get all users                               |
-| GET    | /api/admin/users/search           | Search users by username or email           |
-| GET    | /api/admin/users/search-paginated | Search users by username or email           |
-| GET    | /api/admin/files                  | Get metadata for all uploaded files         |
-| GET    | /api/admin/large-files/{size}     | Get files larger than given size (in bytes) |
-| GET    | /api/admin/storage                | Get total storage used                      |
-| GET    | /api/admin/logs/{lines}           | Get recent application logs (last N lines)  |
-| DELETE | /api/admin/users/{username}       | Delete a user's account                     |
+| Method | Endpoint                          | Description                                    |
+|--------|-----------------------------------|------------------------------------------------|
+| POST   | /api/admin/register               | Register new admin                             |
+| POST   | /api/admin/ban/{id}               | Ban user by ID                                 |
+| POST   | /api/admin/unban/{id}             | Unban user by ID                               |
+| POST   | /api/admin/role/{id}/{role}       | Change user's role                             |
+| GET    | /api/admin/users                  | Get all users                                  |
+| GET    | /api/admin/users/count            | Get total number of users                      |
+| GET    | /api/admin/users/search           | Search users by username or email              |
+| GET    | /api/admin/users/search-paginated | Search users by username or email              |
+| GET    | /api/admin/files                  | Get metadata for all uploaded files            |
+| GET    | /api/admin/files/count            | Get total number of files stored in the system |
+| GET    | /api/admin/large-files/{size}     | Get files larger than given size (in bytes)    |
+| GET    | /api/admin/storage                | Get total storage used                         |
+| GET    | /api/admin/logs/{lines}           | Get recent application logs (last N lines)     |
+| DELETE | /api/admin/users/{username}       | Delete a user's account                        |
 
 ## Setup
 

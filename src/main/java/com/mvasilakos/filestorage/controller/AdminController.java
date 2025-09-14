@@ -56,6 +56,17 @@ public class AdminController {
   }
 
   /**
+   * Returns the number of users registered in the system (both admins and regular users).
+   *
+   * @return the number of users
+   */
+  @GetMapping("/users/count")
+  public ResponseEntity<Long> getTotalUsers() {
+    long totalUsers = userService.countAllUsers();
+    return ResponseEntity.ok(totalUsers);
+  }
+
+  /**
    * Searches for a user with a username or email similar to the given keyword and returns all
    * relevant users.
    *
@@ -158,6 +169,17 @@ public class AdminController {
   public ResponseEntity<List<FileMetadataDto>> getLargeFiles(@PathVariable Long size) {
     List<FileMetadataDto> files = adminService.getLargeFilesExceeding(size);
     return ResponseEntity.ok(files);
+  }
+
+  /**
+   * Returns the total number of files stored in the system.
+   *
+   * @return total number of files
+   */
+  @GetMapping("/files/count")
+  public ResponseEntity<Long> getTotalFiles() {
+    long totalFiles = fileService.countAllFiles();
+    return ResponseEntity.ok(totalFiles);
   }
 
   /**

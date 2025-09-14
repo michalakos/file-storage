@@ -147,7 +147,6 @@ public class FileController {
   public ResponseEntity<List<FileMetadataDto>> listRecentFiles(
       @AuthenticationPrincipal User user,
       @RequestParam(defaultValue = "10") int limit) {
-    log.debug("Listing {} most recent files for user: {}", limit, user.getUsername());
     List<FileMetadataDto> metadata = fileService.listRecentUserFilesWithLimit(user, limit);
     return ResponseEntity.ok(metadata);
   }

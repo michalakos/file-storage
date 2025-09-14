@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -129,7 +130,14 @@ public class AdminService {
 
     Path logFilePath = Paths.get(logfile);
     try (BufferedReader reader = Files.newBufferedReader(logFilePath)) {
-      return reader.lines().limit(lineCount)
+      List<String> allLines = reader.lines().collect(Collectors.toList());
+
+      // Get the last N lines (most recent) and reverse them so newest is first
+      int startIndex = Math.max(0, allLines.size() - lineCount);
+      List<String> recentLines = allLines.subList(startIndex, allLines.size());
+      Collections.reverse(recentLines);
+
+      return recentLines.stream()
           .collect(Collectors.joining(System.lineSeparator()));
 
     } catch (IOException e) {

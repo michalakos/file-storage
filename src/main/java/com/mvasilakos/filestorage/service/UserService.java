@@ -145,6 +145,15 @@ public class UserService {
   }
 
   /**
+   * Count the total number of users.
+   *
+   * @return number of users
+   */
+  public long countAllUsers() {
+    return userRepository.count();
+  }
+
+  /**
    * Search for a user based on their username or email, given a keyword.
    *
    * @param searchTerm search keyword

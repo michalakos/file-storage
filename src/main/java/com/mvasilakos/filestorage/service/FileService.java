@@ -303,6 +303,15 @@ public class FileService {
   }
 
   /**
+   * Count the total number of files.
+   *
+   * @return number of files
+   */
+  public long countAllFiles() {
+    return fileMetadataRepository.count();
+  }
+
+  /**
    * List all files with size that exceeds a given size in bytes.
    *
    * @param sizeInBytes size in bytes
