@@ -22,6 +22,8 @@ public class UserMapper implements EntityMapper<User, UserDto> {
         .id(entity.getId())
         .username(entity.getUsername())
         .email(entity.getEmail())
+        .isBanned(!entity.isEnabled())
+        .isAdmin(entity.isAdmin())
         .build();
   }
 

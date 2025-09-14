@@ -6,13 +6,17 @@ import lombok.Builder;
 /**
  * Dto for user details.
  *
- * @param id user id
+ * @param id       user id
  * @param username username
- * @param email email
+ * @param email    email
  */
 @Builder
 public record UserDto(
     UUID id,
     String username,
-    String email
-) {}
+    String email,
+    boolean isAdmin,
+    boolean isBanned
+) {
+
+}

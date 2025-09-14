@@ -3,14 +3,17 @@ package com.mvasilakos.filestorage.controller;
 import com.mvasilakos.filestorage.dto.AuthRequest;
 import com.mvasilakos.filestorage.dto.FileMetadataDto;
 import com.mvasilakos.filestorage.dto.UserDto;
+import com.mvasilakos.filestorage.model.User;
 import com.mvasilakos.filestorage.service.AdminService;
 import com.mvasilakos.filestorage.service.FileService;
 import com.mvasilakos.filestorage.service.UserService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Admin controller.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -111,14 +115,19 @@ public class AdminController {
   }
 
   /**
-   * Deletes user with the given username.
+   * Deletes user with the given userId.
    *
-   * @param username username of the user to delete
+   * @param userId id of the user to delete
    * @return nothing
    */
-  @DeleteMapping("/users/{username}")
-  public ResponseEntity<Void> deleteUser(@PathVariable String username) {
-    adminService.deleteUser(username);
+  @DeleteMapping("/users/{userId}")
+  public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal User user,
+      @PathVariable UUID userId) {
+    if (user.getId().equals(userId)) {
+      log.error("Failed to delete user with ID {}, cannot delete self", userId);
+      return ResponseEntity.badRequest().build();
+    }
+    adminService.deleteUser(userId);
     return ResponseEntity.noContent().build();
   }
 
@@ -129,7 +138,11 @@ public class AdminController {
    * @return nothing
    */
   @PostMapping("/ban/{id}")
-  public ResponseEntity<Void> banUser(@PathVariable UUID id) {
+  public ResponseEntity<Void> banUser(@AuthenticationPrincipal User user, @PathVariable UUID id) {
+    if (user.getId().equals(id)) {
+      log.error("Failed to ban user with ID {}, cannot ban self", id);
+      return ResponseEntity.badRequest().build();
+    }
     adminService.banUser(id);
     return ResponseEntity.noContent().build();
   }
@@ -141,7 +154,11 @@ public class AdminController {
    * @return nothing
    */
   @PostMapping("/unban/{id}")
-  public ResponseEntity<Void> unbanUser(@PathVariable UUID id) {
+  public ResponseEntity<Void> unbanUser(@AuthenticationPrincipal User user, @PathVariable UUID id) {
+    if (user.getId().equals(id)) {
+      log.error("Failed to unban user with ID {}, cannot unban self", id);
+      return ResponseEntity.badRequest().build();
+    }
     adminService.unbanUser(id);
     return ResponseEntity.noContent().build();
   }
@@ -154,8 +171,30 @@ public class AdminController {
    * @return nothing
    */
   @PostMapping("/role/{id}/{role}")
-  public ResponseEntity<Void> changeUserRole(@PathVariable UUID id, @PathVariable String role) {
+  public ResponseEntity<Void> changeUserRole(@AuthenticationPrincipal User user,
+      @PathVariable UUID id, @PathVariable String role) {
+    if (user.getId().equals(id)) {
+      log.error("Failed to change role for user with ID {}, cannot edit self", id);
+      return ResponseEntity.badRequest().build();
+    }
     adminService.changeUserRole(id, role);
+    return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Toggles the role of the user (admin/user).
+   *
+   * @param id id of the user whose role will change
+   * @return nothing
+   */
+  @PostMapping("/role/{id}")
+  public ResponseEntity<Void> toggleUserRole(@AuthenticationPrincipal User user,
+      @PathVariable UUID id) {
+    if (user.getId().equals(id)) {
+      log.error("Failed to toggle role for user with ID {}, cannot edit self", id);
+      return ResponseEntity.badRequest().build();
+    }
+    adminService.toggleUserRole(id);
     return ResponseEntity.noContent().build();
   }
 

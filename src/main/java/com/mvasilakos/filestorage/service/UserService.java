@@ -14,11 +14,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 /**
  * User service.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -59,19 +62,16 @@ public class UserService {
   /**
    * Delete user's account.
    *
-   * @param username the username of the user to delete
+   * @param userId the userId of the user to delete
    */
   @Transactional
-  public void deleteUsersAccount(String username) {
-    User user = userRepository.findByUsername(username)
-        .orElseThrow(() -> new IllegalArgumentException(
-            String.format("Couldn't find user with username=%s", username)));
-
+  public void deleteUsersAccount(UUID userId) {
     try {
-      userRepository.deleteById(user.getId());
+      userRepository.deleteById(userId);
+      log.info("Successfully deleted user with ID {}", userId);
     } catch (Exception e) {
       throw new GenericException(
-          String.format("Couldn't delete user with id=%s and username=%s", user.getId(), username),
+          String.format("Couldn't delete user with id=%s", userId),
           e);
     }
   }
@@ -173,7 +173,7 @@ public class UserService {
    * @return list of matching users
    */
   public Page<UserDto> searchUserPaginated(String searchTerm, int page, int size) {
-    Pageable pageable = PageRequest.of(page, size);
+    Pageable pageable = PageRequest.of(page, size, Sort.by("username"));
     Page<User> usersPage = userRepository.searchUserPaginated(searchTerm, pageable);
     return usersPage.map(userMapper::toDto);
   }

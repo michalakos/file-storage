@@ -69,6 +69,7 @@ capabilities.
 | POST   | /api/admin/ban/{id}               | Ban user by ID                                 |
 | POST   | /api/admin/unban/{id}             | Unban user by ID                               |
 | POST   | /api/admin/role/{id}/{role}       | Change user's role                             |
+| POST   | /api/admin/role/{id}              | Toggle user's role                             |
 | GET    | /api/admin/users                  | Get all users                                  |
 | GET    | /api/admin/users/count            | Get total number of users                      |
 | GET    | /api/admin/users/search           | Search users by username or email              |
@@ -78,7 +79,7 @@ capabilities.
 | GET    | /api/admin/large-files/{size}     | Get files larger than given size (in bytes)    |
 | GET    | /api/admin/storage                | Get total storage used                         |
 | GET    | /api/admin/logs/{lines}           | Get recent application logs (last N lines)     |
-| DELETE | /api/admin/users/{username}       | Delete a user's account                        |
+| DELETE | /api/admin/users/{userId}         | Delete a user's account                        |
 
 ## Setup
 
@@ -89,6 +90,5 @@ capabilities.
 
 ## TODOs:
 
-* Investigate potential bug where a file can be shared with a user that already has access to it
 * Add monitoring (elk?)
 * GUI
