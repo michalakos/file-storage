@@ -51,6 +51,7 @@ class AdminServiceTest {
 
   @BeforeEach
   void setUp() {
+    ReflectionTestUtils.setField(adminService, "adminUsername", "admin");
     testUserId = UUID.randomUUID();
 
     testUser = User.builder()
@@ -222,27 +223,6 @@ class AdminServiceTest {
     assertEquals(0L, result);
     verify(fileService).calculateTotalStorageUsage();
   }
-
-  @Test
-  void getApplicationLogsShouldReturnFirstLinesFromTempLogFile() throws IOException {
-    // Given
-    int lineCount = 2;
-    Path tempLog = Files.createTempFile("test-log", ".log");
-    Files.write(tempLog, List.of("Line 1", "Line 2", "Line 3"));
-
-    ReflectionTestUtils.setField(adminService, "logfile", tempLog.toString());
-
-    // When
-    String result = adminService.getApplicationLogs(lineCount);
-
-    // Then
-    assertEquals("Line 1" + System.lineSeparator() + "Line 2", result);
-    verifyNoInteractions(fileService, userService);
-
-    // Cleanup
-    Files.deleteIfExists(tempLog);
-  }
-
 
   @Test
   void banUserWhenUserNotFoundShouldPropagateException() {

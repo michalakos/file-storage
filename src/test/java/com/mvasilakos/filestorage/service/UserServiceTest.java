@@ -27,6 +27,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -235,7 +236,9 @@ class UserServiceTest {
         new UserDto(
             UUID.randomUUID(),
             "testUser",
-            "test@example.com"
+            "test@example.com",
+            false,
+            false
         ));
 
     when(userRepository.findAll()).thenReturn(users);
