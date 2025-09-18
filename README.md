@@ -90,5 +90,4 @@ capabilities.
 
 ## TODOs:
 
-* Add monitoring (elk?)
-* GUI
+* Add monitoring
